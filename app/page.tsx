@@ -171,7 +171,7 @@ export default function Page() {
     { w: 5, en: 'Week 5–6',         ru: 'Недели 5–6' },
     { w: 6, en: 'Week 5–6',         ru: 'Недели 5–6' },
   ]
-  const uniqueWeeks = [...new Set(todos.map(t => t.week))].sort((a,b)=>a-b)
+  const uniqueWeeks = Array.from(new Set(todos.map(t => t.week))).sort(...)
 
   // ── DOC ACTIONS
   const addDoc = () => {
