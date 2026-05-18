@@ -479,7 +479,7 @@ export default function Page() {
             {/* Todo groups by week */}
             {uniqueWeeks.map(w => {
               const label = weekLabels.find(l => l.w === w)
-              const items = todos.filter(t => t.w === w)
+              const items = todos.filter(t => t.week === w)
               const doneHere = items.filter(t => t.done).length
               return (
                 <div key={w} style={{ marginBottom:14 }}>
