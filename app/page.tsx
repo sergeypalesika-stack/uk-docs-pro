@@ -171,7 +171,7 @@ export default function Page() {
     { w: 5, en: 'Week 5–6',         ru: 'Недели 5–6' },
     { w: 6, en: 'Week 5–6',         ru: 'Недели 5–6' },
   ]
-  const uniqueWeeks = Array.from(new Set(todos.map(t => t.week))).sort(...)
+  const uniqueWeeks = Array.from(new Set(todos.map(t => t.week))).sort((a,b)=>a-b)
 
   // ── DOC ACTIONS
   const addDoc = () => {
@@ -646,7 +646,7 @@ export default function Page() {
 // ── SUB-COMPONENTS
 
 function DocCard({ doc, cat, lang, onOpen }: {
-  doc: Doc; cat: ReturnType<typeof CATEGORIES[0]['id'] extends string ? any : any>
+  doc: Doc; cat: { id: string; label: string; labelRu: string; icon: string; color: string }
   lang: Lang; onOpen: () => void
 }) {
   const title = lang==='ru'&&doc.titleRu ? doc.titleRu : doc.title
