@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Rounded square background -->
+  <rect width="120" height="120" rx="26" fill="#012169"/>
+
+  <!-- White diagonals (St Andrew + St Patrick base) -->
+  <line x1="0" y1="0" x2="120" y2="120" stroke="white" stroke-width="24"/>
+  <line x1="120" y1="0" x2="0" y2="120" stroke="white" stroke-width="24"/>
+
+  <!-- Red diagonals (St Patrick) -->
+  <line x1="0" y1="0" x2="120" y2="120" stroke="#C8102E" stroke-width="10"/>
+  <line x1="120" y1="0" x2="0" y2="120" stroke="#C8102E" stroke-width="10"/>
+
+  <!-- White cross (St George base) -->
+  <rect x="48" y="0" width="24" height="120" fill="white"/>
+  <rect x="0" y="48" width="120" height="24" fill="white"/>
+
+  <!-- Red cross (St George) -->
+  <rect x="52" y="0" width="16" height="120" fill="#C8102E"/>
+  <rect x="0" y="52" width="120" height="16" fill="#C8102E"/>
+
+  <!-- Clip to rounded corners -->
+  <rect width="120" height="120" rx="26" fill="none" stroke="none"/>
+</svg>
