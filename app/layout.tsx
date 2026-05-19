@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: 'UK Docs',
   description: 'My UK documents wallet — Sergii Palesika',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
