@@ -1,6 +1,6 @@
 {
   "name": "uk-docs",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,9 @@
   "dependencies": {
     "next": "14.2.3",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "@supabase/supabase-js": "^2.43.4",
+    "@supabase/ssr": "^0.3.0"
   },
   "devDependencies": {
     "@types/node": "^20",
