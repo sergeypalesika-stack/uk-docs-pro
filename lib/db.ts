@@ -107,3 +107,50 @@ export async function seedDefaultDocs(userId: string) {
     await addDoc(userId, doc)
   }
 }
+
+// ── ADDRESSES ────────────────────────────────────────
+export interface Address {
+  id: string
+  user_id: string
+  label: string
+  label_ru: string
+  line1: string
+  line2: string
+  city: string
+  postcode: string
+  country: string
+  notes: string
+  is_home: boolean
+  color: string
+  created_at: string
+}
+
+export async function getAddresses(userId: string) {
+  const { data } = await sb()
+    .from('addresses')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_home', { ascending: false })
+    .order('created_at', { ascending: true })
+  return (data ?? []) as Address[]
+}
+
+export async function addAddress(userId: string, addr: Omit<Address, 'id' | 'user_id' | 'created_at'>) {
+  const { data } = await sb().from('addresses').insert({ user_id: userId, ...addr }).select().single()
+  return data as Address | null
+}
+
+export async function updateAddress(id: string, fields: Partial<Omit<Address, 'id' | 'user_id'>>) {
+  return sb().from('addresses').update(fields).eq('id', id)
+}
+
+export async function deleteAddress(id: string) {
+  return sb().from('addresses').delete().eq('id', id)
+}
+
+export async function setHomeAddress(userId: string, id: string) {
+  // unset all home flags first
+  await sb().from('addresses').update({ is_home: false }).eq('user_id', userId)
+  // set new home
+  return sb().from('addresses').update({ is_home: true }).eq('id', id)
+}
