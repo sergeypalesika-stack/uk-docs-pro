@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
+import type { Address } from '@/lib/db'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -15,7 +16,7 @@ interface Profile { id: string; name: string; name_ru: string; dob: string; nati
 interface TodoItem { id: string; text: string; textRu: string; done: boolean; week: number; category: string }
 
 type Lang    = 'en' | 'ru'
-type MainTab = 'docs' | 'passport' | 'todo' | 'profile'
+type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'addPassport' | 'passportDetail' | 'editProfile'
 
 // ── COLORS
@@ -54,6 +55,9 @@ export default function Page() {
   const [view,      setView]      = useState<View>('list')
   const [selDoc,    setSelDoc]    = useState<Doc | null>(null)
   const [selPass,   setSelPass]   = useState<Passport | null>(null)
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [selAddr,   setSelAddr]   = useState<Address | null>(null)
+  const [addrForm,  setAddrForm]  = useState({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
   const [filterCat, setFilterCat] = useState('all')
   const [search,    setSearch]    = useState('')
   const [loading,   setLoading]   = useState(true)
@@ -76,17 +80,19 @@ export default function Page() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUser(user)
-      const [prof, docs, passes, todos] = await Promise.all([
+      const [prof, docs, passes, todos, addrs] = await Promise.all([
         DB.getProfile(user.id),
         DB.getDocs(user.id),
         DB.getPassports(user.id),
         DB.getTodos(user.id),
+        DB.getAddresses(user.id),
       ])
       setProfile(prof)
       setProfForm(prof ?? {})
       setDocs(docs)
       setPassports(passes as Passport[])
       setTodos(todos)
+      setAddresses(addrs)
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocs(user.id)
       setDocs(freshDocs)
@@ -189,7 +195,53 @@ export default function Page() {
     setTodos(DEFAULT_TODOS.map(t => ({ ...t, done: false })))
   }
 
-  // ── PROFILE
+  // ── ADDRESS ACTIONS
+  const handleAddAddress = async () => {
+    if (!user || !addrForm.label) return
+    setSaving(true)
+    if (addrForm.is_home) await DB.setHomeAddress(user.id, 'none')
+    const na = await DB.addAddress(user.id, addrForm)
+    if (na) {
+      if (addrForm.is_home) setAddresses(prev => [na, ...prev.map(a => ({ ...a, is_home: false }))])
+      else setAddresses(prev => [...prev, na])
+    }
+    setAddrForm({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
+    switchTab('address'); setSaving(false)
+  }
+  const handleDeleteAddress = async (id: string) => {
+    await DB.deleteAddress(id)
+    setAddresses(prev => prev.filter(a => a.id !== id))
+    setConfirmDel(null); setSelAddr(null); setView('list')
+  }
+  const handleSetHome = async (addr: Address) => {
+    if (!user) return
+    await DB.setHomeAddress(user.id, addr.id)
+    setAddresses(prev => prev.map(a => ({ ...a, is_home: a.id === addr.id })))
+    setSelAddr({ ...addr, is_home: true })
+  }
+
+  // ── SHARE ADDRESS
+  const shareAddress = (addr: Address, via: 'whatsapp' | 'telegram') => {
+    const full = [addr.line1, addr.line2, addr.city, addr.postcode, addr.country].filter(Boolean).join(', ')
+    const label = lang === 'ru' && addr.label_ru ? addr.label_ru : addr.label
+    const text = encodeURIComponent(`📍 ${label}\n${full}${addr.notes ? '\n' + addr.notes : ''}`)
+    if (via === 'whatsapp') window.open(`https://wa.me/?text=${text}`, '_blank')
+    else window.open(`https://t.me/share/url?url=${text}`, '_blank')
+  }
+
+  // ── COPY ADDRESS
+  const copyAddress = (addr: Address) => {
+    const full = [addr.line1, addr.line2, addr.city, addr.postcode, addr.country].filter(Boolean).join(', ')
+    navigator.clipboard.writeText(full)
+  }
+
+  // ── ADDRESS COLORS
+  const ADDR_COLORS = ['#2457a4','#0369a1','#2e7d32','#b45309','#c62828','#5b21b6','#0f766e','#1a2a4a']
+
+  // ── HOME ADDRESS
+  const homeAddr = addresses.find(a => a.is_home)
+
+  // ── PROFILE SAVE
   const handleSaveProfile = async () => {
     if (!user) return
     setSaving(true)
@@ -251,10 +303,11 @@ export default function Page() {
           {/* Tabs */}
           <div style={{ display: 'flex', gap: 4, paddingBottom: 12 }}>
             {([
-              { id: 'docs',     icon: '📂', en: 'Documents', ru: 'Документы' },
-              { id: 'passport', icon: '📘', en: 'Passports',  ru: 'Паспорта' },
-              { id: 'todo',     icon: '✅', en: 'Tasks',      ru: 'Задачи' },
-              { id: 'profile',  icon: '👤', en: 'Profile',    ru: 'Профиль' },
+              { id: 'docs',     icon: '📂', en: 'Docs',      ru: 'Доки' },
+              { id: 'passport', icon: '📘', en: 'Passport',  ru: 'Паспорт' },
+              { id: 'address',  icon: '📍', en: 'Addresses', ru: 'Адреса' },
+              { id: 'todo',     icon: '✅', en: 'Tasks',     ru: 'Задачи' },
+              { id: 'profile',  icon: '👤', en: 'Profile',   ru: 'Профиль' },
             ] as { id: MainTab; icon: string; en: string; ru: string }[]).map(tb => (
               <button key={tb.id} onClick={() => switchTab(tb.id)} style={{ flex: 1, background: tab === tb.id ? 'rgba(255,255,255,0.18)' : 'transparent', border: tab === tb.id ? '1px solid rgba(255,255,255,0.3)' : '1px solid transparent', borderRadius: 10, padding: '7px 4px', color: tab === tb.id ? '#fff' : 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: tab === tb.id ? 700 : 500, cursor: 'pointer' }}>
                 <div>{tb.icon}</div><div>{lang === 'ru' ? tb.ru : tb.en}</div>
@@ -473,6 +526,201 @@ export default function Page() {
         )}
 
         {/* ══════════ TODO TAB ══════════ */}
+        {/* ══════════ ADDRESS BOOK TAB ══════════ */}
+        {tab === 'address' && view === 'list' && (
+          <>
+            {/* Home address hero */}
+            {homeAddr ? (
+              <div style={{ background: `linear-gradient(135deg, ${homeAddr.color}, ${homeAddr.color}cc)`, borderRadius: 20, padding: '22px 22px 18px', marginBottom: 14, color: '#fff', cursor: 'pointer' }}
+                onClick={() => { setSelAddr(homeAddr); setView('detail') }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: 28 }}>🏠</span>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, opacity: 0.7 }}>{t('Home Address', 'Адрес прописки')}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>{lang === 'ru' && homeAddr.label_ru ? homeAddr.label_ru : homeAddr.label}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.9 }}>
+                  {homeAddr.line1}{homeAddr.line2 ? `, ${homeAddr.line2}` : ''}<br />
+                  {[homeAddr.city, homeAddr.postcode].filter(Boolean).join(', ')}<br />
+                  {homeAddr.country}
+                </div>
+                {/* Share buttons */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                  <button onClick={e => { e.stopPropagation(); shareAddress(homeAddr, 'whatsapp') }} style={{ flex: 1, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, padding: '9px 0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 16 }}>💬</span> WhatsApp
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); shareAddress(homeAddr, 'telegram') }} style={{ flex: 1, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, padding: '9px 0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 16 }}>✈️</span> Telegram
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); copyAddress(homeAddr) }} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, padding: '9px 12px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    ⎘ {t('Copy', 'Копировать')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: C.surface, borderRadius: 16, padding: '20px 18px', marginBottom: 14, border: `2px dashed ${C.border}`, textAlign: 'center' as const }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.navy, marginBottom: 4 }}>{t('No home address set', 'Адрес прописки не добавлен')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Add an address and mark it as home', 'Добавь адрес и отметь его как главный')}</div>
+              </div>
+            )}
+
+            {/* Other addresses */}
+            {addresses.filter(a => !a.is_home).length > 0 && (
+              <>
+                <SLabel>📌 {t('Saved Addresses', 'Важные адреса')}</SLabel>
+                {addresses.filter(a => !a.is_home).map(addr => (
+                  <div key={addr.id} style={{ background: C.surface, borderRadius: 14, marginBottom: 8, padding: '14px 16px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${addr.color}` }}
+                    onClick={() => { setSelAddr(addr); setView('detail') }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: addr.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📍</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: C.navy }}>{lang === 'ru' && addr.label_ru ? addr.label_ru : addr.label}</div>
+                        <div style={{ fontSize: 12, color: C.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                          {[addr.line1, addr.city, addr.postcode].filter(Boolean).join(', ')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={e => { e.stopPropagation(); shareAddress(addr, 'whatsapp') }} style={{ background: '#dcfce7', border: 'none', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', fontSize: 14 }}>💬</button>
+                        <button onClick={e => { e.stopPropagation(); shareAddress(addr, 'telegram') }} style={{ background: '#dbeafe', border: 'none', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', fontSize: 14 }}>✈️</button>
+                      </div>
+                      <div style={{ color: '#cbd5e0', fontSize: 20 }}>›</div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {addresses.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: C.muted }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📍</div>
+                <div style={{ fontSize: 14 }}>{t('No addresses yet', 'Нет адресов')}</div>
+              </div>
+            )}
+
+            <button onClick={() => setView('add')} style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, background: '#2e7d32', color: '#fff', border: 'none', fontSize: 28, cursor: 'pointer', boxShadow: '0 4px 20px rgba(46,125,50,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          </>
+        )}
+
+        {/* ══ ADDRESS DETAIL ══ */}
+        {tab === 'address' && view === 'detail' && selAddr && (
+          <>
+            <button onClick={() => { setView('list'); setSelAddr(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад')}</button>
+
+            {/* Hero */}
+            <div style={{ background: `linear-gradient(135deg, ${selAddr.color}, ${selAddr.color}bb)`, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 32 }}>{selAddr.is_home ? '🏠' : '📍'}</span>
+                <div>
+                  {selAddr.is_home && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, opacity: 0.7, marginBottom: 2 }}>{t('Home Address', 'Адрес прописки')}</div>}
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>{lang === 'ru' && selAddr.label_ru ? selAddr.label_ru : selAddr.label}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 15, lineHeight: 1.7, opacity: 0.95 }}>
+                {selAddr.line1 && <div>{selAddr.line1}</div>}
+                {selAddr.line2 && <div>{selAddr.line2}</div>}
+                {(selAddr.city || selAddr.postcode) && <div>{[selAddr.city, selAddr.postcode].filter(Boolean).join(', ')}</div>}
+                <div>{selAddr.country}</div>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '18px 22px', marginBottom: 12 }}>
+              {selAddr.notes && <DRow label={t('Notes', 'Заметки')}><span style={{ fontSize: 13, color: C.textSub }}>{selAddr.notes}</span></DRow>}
+              <DRow label={t('Full address', 'Полный адрес')}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontSize: 13, color: C.textSub, flex: 1, lineHeight: 1.5 }}>
+                    {[selAddr.line1, selAddr.line2, selAddr.city, selAddr.postcode, selAddr.country].filter(Boolean).join(', ')}
+                  </span>
+                  <CopyBtn value={[selAddr.line1, selAddr.line2, selAddr.city, selAddr.postcode, selAddr.country].filter(Boolean).join(', ')} lang={lang} />
+                </div>
+              </DRow>
+            </div>
+
+            {/* Share */}
+            <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>📤 {t('Share Address', 'Поделиться адресом')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button onClick={() => shareAddress(selAddr, 'whatsapp')} style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 28 }}>💬</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>WhatsApp</span>
+                </button>
+                <button onClick={() => shareAddress(selAddr, 'telegram')} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 28 }}>✈️</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Telegram</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              {!selAddr.is_home && (
+                <button onClick={() => handleSetHome(selAddr)} style={{ flex: 1, background: '#fef9c3', border: '1.5px solid #fde047', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#854d0e' }}>
+                  🏠 {t('Set as Home', 'Сделать главным')}
+                </button>
+              )}
+              <button onClick={() => setConfirmDel(selAddr.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>
+                🗑 {t('Delete', 'Удалить')}
+              </button>
+            </div>
+
+            {confirmDel === selAddr.id && (
+              <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
+                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this address?', 'Удалить этот адрес?')}</div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Отмена')}</button>
+                  <button onClick={() => handleDeleteAddress(selAddr.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Удалить')}</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ ADD ADDRESS ══ */}
+        {tab === 'address' && view === 'add' && (
+          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>📍 {t('New Address', 'Новый адрес')}</div>
+
+            {/* Color picker */}
+            <FField label={t('Colour', 'Цвет')}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                {ADDR_COLORS.map(col => (
+                  <button key={col} onClick={() => setAddrForm(f => ({ ...f, color: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, border: addrForm.color === col ? '3px solid #1a202c' : '2px solid transparent', cursor: 'pointer', boxShadow: addrForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
+                ))}
+              </div>
+            </FField>
+
+            <FField label={t('Label (EN)', 'Название (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} placeholder="e.g. Oxford Home, GP Surgery" style={inputStyle} /></FField>
+            <FField label={t('Label (RU)', 'Название (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} placeholder="напр. Дом в Оксфорде, Врач" style={inputStyle} /></FField>
+            <FField label={t('Address line 1', 'Адрес строка 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} placeholder="e.g. 12 Rose Street" style={inputStyle} /></FField>
+            <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} placeholder={t('Flat, area (optional)', 'Квартира, район (необязательно)')} style={inputStyle} /></FField>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <FField label={t('City', 'Город')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} placeholder="Oxford" style={inputStyle} /></FField>
+              <FField label={t('Postcode', 'Почтовый индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' as const }} /></FField>
+            </div>
+            <FField label={t('Country', 'Страна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} placeholder="United Kingdom" style={inputStyle} /></FField>
+            <FField label={t('Notes', 'Заметки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('e.g. near bus stop, ring bell 2', 'напр. возле остановки, звонок 2')} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+
+            {/* Home toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
+              onClick={() => setAddrForm(f => ({ ...f, is_home: !f.is_home }))}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Set as Home Address', 'Сделать адресом прописки')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address in UK', 'Главный зарегистрированный адрес в UK')}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => switchTab('address')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Отмена')}</button>
+              <button onClick={handleAddAddress} disabled={!addrForm.label || !addrForm.line1 || saving} style={{ flex: 2, background: addrForm.label && addrForm.line1 ? '#2e7d32' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: addrForm.label && addrForm.line1 ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>
+                {saving ? '⏳' : t('Save Address', 'Сохранить адрес')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {tab === 'todo' && (
           <>
             <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 14 }}>
