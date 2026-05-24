@@ -17,7 +17,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru'
 type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'profile'
-type View    = 'list' | 'detail' | 'add' | 'addPassport' | 'passportDetail' | 'editProfile'
+type View    = 'list' | 'detail' | 'add' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo'
 
 // ── COLORS
 const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6', surface: '#ffffff', bg: '#f1f5fb', border: '#e2e8f4', muted: '#7a8aaa', text: '#1a2035', textSub: '#4a5570', red: '#dc2626', green: '#16a34a' }
@@ -218,6 +218,55 @@ export default function Page() {
     await DB.setHomeAddress(user.id, addr.id)
     setAddresses(prev => prev.map(a => ({ ...a, is_home: a.id === addr.id })))
     setSelAddr({ ...addr, is_home: true })
+  }
+
+  const handleUpdateAddress = async () => {
+    if (!user || !selAddr) return
+    setSaving(true)
+    await DB.updateAddress(selAddr.id, addrForm)
+    const updated = { ...selAddr, ...addrForm }
+    if (addrForm.is_home) {
+      await DB.setHomeAddress(user.id, selAddr.id)
+      setAddresses(prev => prev.map(a => a.id === selAddr.id ? { ...updated, is_home: true } : { ...a, is_home: false }))
+    } else {
+      setAddresses(prev => prev.map(a => a.id === selAddr.id ? updated : a))
+    }
+    setSelAddr(updated)
+    setView('detail')
+    setSaving(false)
+  }
+
+  // ── TODO EDIT
+  const [todoForm, setTodoForm] = useState({ text: '', textRu: '', category: 'other', week: 1 })
+  const [selTodo, setSelTodo] = useState<TodoItem | null>(null)
+
+  const handleAddTodo = async () => {
+    if (!user || !todoForm.text) return
+    const newTodo: TodoItem = { id: generateId(), text: todoForm.text, textRu: todoForm.textRu, done: false, week: todoForm.week, category: todoForm.category }
+    const nt = [...todos, newTodo]
+    saveTodos(nt)
+    await DB.toggleTodoDB(user.id, newTodo.id, false)
+    setTodoForm({ text: '', textRu: '', category: 'other', week: 1 })
+    setView('list')
+  }
+
+  const handleUpdateTodo = async () => {
+    if (!selTodo) return
+    const nt = todos.map(t => t.id === selTodo.id ? { ...t, text: todoForm.text, textRu: todoForm.textRu, category: todoForm.category, week: todoForm.week } : t)
+    saveTodos(nt)
+    setSelTodo(null)
+    setView('list')
+  }
+
+  const handleDeleteTodo = async (id: string) => {
+    if (!user) return
+    const nt = todos.filter(t => t.id !== id)
+    saveTodos(nt)
+    await DB.resetTodosDB(user.id)
+    for (const t of nt) { if (t.done) await DB.toggleTodoDB(user.id, t.id, true) }
+    setConfirmDel(null)
+    setSelTodo(null)
+    setView('list')
   }
 
   // ── SHARE ADDRESS
@@ -655,6 +704,9 @@ export default function Page() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <button onClick={() => { setAddrForm({ label: selAddr.label, label_ru: selAddr.label_ru, line1: selAddr.line1, line2: selAddr.line2, city: selAddr.city, postcode: selAddr.postcode, country: selAddr.country, notes: selAddr.notes, is_home: selAddr.is_home, color: selAddr.color }); setView('editAddress') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>
+                ✏️ {t('Edit', 'Изменить')}
+              </button>
               {!selAddr.is_home && (
                 <button onClick={() => handleSetHome(selAddr)} style={{ flex: 1, background: '#fef9c3', border: '1.5px solid #fde047', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#854d0e' }}>
                   🏠 {t('Set as Home', 'Сделать главным')}
@@ -721,8 +773,47 @@ export default function Page() {
           </div>
         )}
 
-        {tab === 'todo' && (
+        {/* ══ EDIT ADDRESS ══ */}
+        {tab === 'address' && view === 'editAddress' && selAddr && (
+          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Address', 'Редактировать адрес')}</div>
+            <FField label={t('Colour', 'Цвет')}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                {ADDR_COLORS.map(col => (
+                  <button key={col} onClick={() => setAddrForm(f => ({ ...f, color: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, border: addrForm.color === col ? '3px solid #1a202c' : '2px solid transparent', cursor: 'pointer', boxShadow: addrForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
+                ))}
+              </div>
+            </FField>
+            <FField label={t('Label (EN)', 'Название (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Label (RU)', 'Название (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Address line 1', 'Адрес строка 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} style={inputStyle} /></FField>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <FField label={t('City', 'Город')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('Postcode', 'Индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' as const }} /></FField>
+            </div>
+            <FField label={t('Country', 'Страна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Notes', 'Заметки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
+              onClick={() => setAddrForm(f => ({ ...f, is_home: !f.is_home }))}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Home Address', 'Адрес прописки')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address', 'Главный зарегистрированный адрес')}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setView('detail')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Отмена')}</button>
+              <button onClick={handleUpdateAddress} disabled={saving} style={{ flex: 2, background: saving ? '#94a3b8' : '#2e7d32', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: '#fff', fontWeight: 700 }}>
+                {saving ? '⏳' : t('Save Changes', 'Сохранить изменения')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'todo' && view === 'list' && (
           <>
+            {/* Progress bar */}
             <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{t('Progress', 'Прогресс')}</span>
@@ -733,30 +824,145 @@ export default function Page() {
               </div>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{todos.length - todoDone} {t('remaining', 'осталось')}</div>
             </div>
+
             {Array.from(new Set(todos.map(t => t.week))).sort((a, b) => a - b).map(w => {
-              const wL: Record<number, { en: string; ru: string }> = { 0: { en: 'Before Arriving', ru: 'До приезда' }, 1: { en: 'Week 1', ru: 'Неделя 1' }, 2: { en: 'Week 2', ru: 'Неделя 2' }, 3: { en: 'Week 3', ru: 'Неделя 3' }, 4: { en: 'Week 4', ru: 'Неделя 4' }, 5: { en: 'Week 5', ru: 'Неделя 5' }, 6: { en: 'Week 6', ru: 'Неделя 6' } }
+              const wL: Record<number, { en: string; ru: string }> = {
+                0: { en: 'Before Arriving', ru: 'До приезда' },
+                1: { en: 'Week 1', ru: 'Неделя 1' },
+                2: { en: 'Week 2', ru: 'Неделя 2' },
+                3: { en: 'Week 3', ru: 'Неделя 3' },
+                4: { en: 'Week 4', ru: 'Неделя 4' },
+                5: { en: 'Week 5', ru: 'Неделя 5' },
+                6: { en: 'Week 6', ru: 'Неделя 6' },
+              }
               const items = todos.filter(t => t.week === w)
               const doneH = items.filter(t => t.done).length
               return (
                 <div key={w} style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: C.blue }}>{lang === 'ru' ? wL[w]?.ru : wL[w]?.en}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: C.blue }}>
+                      {lang === 'ru' ? wL[w]?.ru : wL[w]?.en}
+                    </div>
                     <span style={{ fontSize: 11, color: C.muted }}>{doneH}/{items.length}</span>
                   </div>
                   <div style={{ background: C.surface, borderRadius: 14, overflow: 'hidden' }}>
                     {items.map((item, i) => (
-                      <div key={item.id} onClick={() => handleToggleTodo(item)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: i < items.length - 1 ? `1px solid ${C.border}` : 'none', cursor: 'pointer', background: item.done ? '#f0fdf4' : C.surface }}>
-                        <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: item.done ? '#22c55e' : 'transparent', border: item.done ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff', transition: 'all 0.2s' }}>{item.done ? '✓' : ''}</div>
-                        <div style={{ flex: 1, fontSize: 13, color: item.done ? '#4ade80' : C.text, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4 }}>{lang === 'ru' ? item.textRu : item.text}</div>
-                        <span style={{ fontSize: 15 }}>{CATEGORIES.find(c => c.id === item.category)?.icon ?? '📁'}</span>
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: i < items.length - 1 ? `1px solid ${C.border}` : 'none', background: item.done ? '#f0fdf4' : C.surface }}>
+                        {/* Checkbox */}
+                        <div onClick={() => handleToggleTodo(item)} style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: item.done ? '#22c55e' : 'transparent', border: item.done ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
+                          {item.done ? '✓' : ''}
+                        </div>
+                        {/* Text */}
+                        <div onClick={() => handleToggleTodo(item)} style={{ flex: 1, fontSize: 13, color: item.done ? '#4ade80' : C.text, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4, cursor: 'pointer' }}>
+                          {lang === 'ru' ? item.textRu || item.text : item.text}
+                        </div>
+                        <span style={{ fontSize: 14 }}>{CATEGORIES.find(c => c.id === item.category)?.icon ?? '📁'}</span>
+                        {/* Edit button */}
+                        <button onClick={() => { setSelTodo(item); setTodoForm({ text: item.text, textRu: item.textRu, category: item.category, week: item.week }); setView('editTodo') }}
+                          style={{ background: '#eff6ff', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.blue, flexShrink: 0 }}>
+                          ✏️
+                        </button>
+                        {/* Delete button */}
+                        <button onClick={() => { setConfirmDel(item.id) }}
+                          style={{ background: '#fee2e2', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.red, flexShrink: 0 }}>
+                          🗑
+                        </button>
                       </div>
                     ))}
                   </div>
+
+                  {/* Inline confirm delete for todo */}
+                  {items.some(i => i.id === confirmDel) && (
+                    <div style={{ background: '#fee2e2', borderRadius: 10, padding: '12px 14px', marginTop: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ flex: 1, fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{t('Delete this task?', 'Удалить эту задачу?')}</span>
+                      <button onClick={() => setConfirmDel(null)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 10px', cursor: 'pointer', fontSize: 12 }}>{t('No', 'Нет')}</button>
+                      <button onClick={() => { const id = confirmDel!; handleDeleteTodo(id) }} style={{ background: C.red, border: 'none', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 700 }}>{t('Yes', 'Да')}</button>
+                    </div>
+                  )}
                 </div>
               )
             })}
-            <button onClick={handleResetTodos} style={{ width: '100%', background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.textSub, marginTop: 4 }}>🔄 {t('Reset all tasks', 'Сбросить все задачи')}</button>
+
+            {/* Bottom actions */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button onClick={handleResetTodos} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.textSub }}>
+                🔄 {t('Reset all', 'Сбросить')}
+              </button>
+              <button onClick={() => { setTodoForm({ text: '', textRu: '', category: 'other', week: 1 }); setView('addTodo') }} style={{ flex: 2, background: C.blue, border: 'none', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
+                + {t('Add custom task', 'Добавить задачу')}
+              </button>
+            </div>
           </>
+        )}
+
+        {/* ══ ADD TODO ══ */}
+        {tab === 'todo' && view === 'addTodo' && (
+          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>➕ {t('New Task', 'Новая задача')}</div>
+            <FField label={t('Task (EN)', 'Задача (EN)')}><input value={todoForm.text} onChange={e => setTodoForm(f => ({ ...f, text: e.target.value }))} placeholder="e.g. Book GP appointment" style={inputStyle} /></FField>
+            <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} placeholder="напр. Записаться к врачу" style={inputStyle} /></FField>
+            <FField label={t('Week', 'Неделя')}>
+              <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
+                <option value={0}>{t('Before Arriving', 'До приезда')}</option>
+                <option value={1}>{t('Week 1', 'Неделя 1')}</option>
+                <option value={2}>{t('Week 2', 'Неделя 2')}</option>
+                <option value={3}>{t('Week 3', 'Неделя 3')}</option>
+                <option value={4}>{t('Week 4', 'Неделя 4')}</option>
+                <option value={5}>{t('Week 5', 'Неделя 5')}</option>
+                <option value={6}>{t('Week 6', 'Неделя 6')}</option>
+                <option value={7}>{t('Later', 'Позже')}</option>
+              </select>
+            </FField>
+            <FField label={t('Category', 'Категория')}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {CATEGORIES.map(c => (
+                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2 }}>
+                    <span style={{ fontSize: 18 }}>{c.icon}</span>
+                    <span>{lang === 'ru' ? c.labelRu : c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </FField>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setView('list')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Отмена')}</button>
+              <button onClick={handleAddTodo} disabled={!todoForm.text} style={{ flex: 2, background: todoForm.text ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: todoForm.text ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{t('Add Task', 'Добавить задачу')}</button>
+            </div>
+          </div>
+        )}
+
+        {/* ══ EDIT TODO ══ */}
+        {tab === 'todo' && view === 'editTodo' && selTodo && (
+          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Task', 'Редактировать задачу')}</div>
+            <FField label={t('Task (EN)', 'Задача (EN)')}><input value={todoForm.text} onChange={e => setTodoForm(f => ({ ...f, text: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Week', 'Неделя')}>
+              <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
+                <option value={0}>{t('Before Arriving', 'До приезда')}</option>
+                <option value={1}>{t('Week 1', 'Неделя 1')}</option>
+                <option value={2}>{t('Week 2', 'Неделя 2')}</option>
+                <option value={3}>{t('Week 3', 'Неделя 3')}</option>
+                <option value={4}>{t('Week 4', 'Неделя 4')}</option>
+                <option value={5}>{t('Week 5', 'Неделя 5')}</option>
+                <option value={6}>{t('Week 6', 'Неделя 6')}</option>
+                <option value={7}>{t('Later', 'Позже')}</option>
+              </select>
+            </FField>
+            <FField label={t('Category', 'Категория')}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {CATEGORIES.map(c => (
+                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2 }}>
+                    <span style={{ fontSize: 18 }}>{c.icon}</span>
+                    <span>{lang === 'ru' ? c.labelRu : c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </FField>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => { setSelTodo(null); setView('list') }} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Отмена')}</button>
+              <button onClick={handleUpdateTodo} disabled={!todoForm.text} style={{ flex: 2, background: todoForm.text ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: todoForm.text ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{t('Save Changes', 'Сохранить')}</button>
+            </div>
+          </div>
         )}
 
         {/* ══════════ PROFILE TAB ══════════ */}
