@@ -17,7 +17,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru'
 type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'profile'
-type View    = 'list' | 'detail' | 'add' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo'
+type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo'
 
 // ── COLORS
 const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6', surface: '#ffffff', bg: '#f1f5fb', border: '#e2e8f4', muted: '#7a8aaa', text: '#1a2035', textSub: '#4a5570', red: '#dc2626', green: '#16a34a' }
@@ -143,6 +143,23 @@ export default function Page() {
     if (selDoc?.id === doc.id) setSelDoc({ ...doc, pinned: !doc.pinned })
   }
 
+  const handleUpdateDoc = async () => {
+    if (!selDoc) return
+    setSaving(true)
+    await DB.updateDoc(selDoc.id, {
+      title: docForm.title, title_ru: docForm.title_ru,
+      number: docForm.number,
+      valid_from: docForm.valid_from || null, valid_until: docForm.valid_until || null,
+      notes: docForm.notes, notes_ru: docForm.notes_ru,
+      pinned: docForm.pinned,
+    })
+    const updated = { ...selDoc, ...docForm, valid_from: docForm.valid_from || null, valid_until: docForm.valid_until || null }
+    setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
+    setSelDoc(updated)
+    setView('detail')
+    setSaving(false)
+  }
+
   // ── PASSPORT ACTIONS
   const handleAddPassport = async () => {
     if (!user || !passForm.number) return
@@ -244,7 +261,8 @@ export default function Page() {
     if (!user || !todoForm.text) return
     const newTodo: TodoItem = { id: generateId(), text: todoForm.text, textRu: todoForm.textRu, done: false, week: todoForm.week, category: todoForm.category }
     const nt = [...todos, newTodo]
-    saveTodos(nt)
+    setTodos(nt)
+    try { localStorage.setItem('uk_todos_v2', JSON.stringify(nt)) } catch(_) {}
     await DB.toggleTodoDB(user.id, newTodo.id, false)
     setTodoForm({ text: '', textRu: '', category: 'other', week: 1 })
     setView('list')
@@ -253,7 +271,8 @@ export default function Page() {
   const handleUpdateTodo = async () => {
     if (!selTodo) return
     const nt = todos.map(t => t.id === selTodo.id ? { ...t, text: todoForm.text, textRu: todoForm.textRu, category: todoForm.category, week: todoForm.week } : t)
-    saveTodos(nt)
+    setTodos(nt)
+    try { localStorage.setItem('uk_todos_v2', JSON.stringify(nt)) } catch(_) {}
     setSelTodo(null)
     setView('list')
   }
@@ -261,7 +280,8 @@ export default function Page() {
   const handleDeleteTodo = async (id: string) => {
     if (!user) return
     const nt = todos.filter(t => t.id !== id)
-    saveTodos(nt)
+    setTodos(nt)
+    try { localStorage.setItem('uk_todos_v2', JSON.stringify(nt)) } catch(_) {}
     await DB.resetTodosDB(user.id)
     for (const t of nt) { if (t.done) await DB.toggleTodoDB(user.id, t.id, true) }
     setConfirmDel(null)
@@ -420,8 +440,9 @@ export default function Page() {
               {(selDoc.notes || selDoc.notes_ru) && <DRow label={t('Notes', 'Заметки')}><span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>{lang === 'ru' && selDoc.notes_ru ? selDoc.notes_ru : selDoc.notes}</span></DRow>}
             </div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <button onClick={() => { setDocForm({ category: selDoc.category, title: selDoc.title, title_ru: selDoc.title_ru, number: selDoc.number, valid_from: selDoc.valid_from ?? '', valid_until: selDoc.valid_until ?? '', notes: selDoc.notes, notes_ru: selDoc.notes_ru, pinned: selDoc.pinned }); setView('edit') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>✏️ {t('Edit', 'Изменить')}</button>
               <button onClick={() => handleTogglePin(selDoc)} style={{ flex: 1, background: selDoc.pinned ? '#fef9c3' : C.surface, color: selDoc.pinned ? '#854d0e' : C.textSub, border: `1.5px solid ${selDoc.pinned ? '#fde047' : C.border}`, borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📌 {selDoc.pinned ? t('Unpin', 'Открепить') : t('Pin', 'Закрепить')}</button>
-              <button onClick={() => setConfirmDel(selDoc.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑 {t('Delete', 'Удалить')}</button>
+              <button onClick={() => setConfirmDel(selDoc.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑</button>
             </div>
             {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
               <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this document?', 'Удалить этот документ?')}</div>
@@ -458,6 +479,35 @@ export default function Page() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => switchTab('docs')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Отмена')}</button>
               <button onClick={handleAddDoc} disabled={!docForm.title || saving} style={{ flex: 2, background: docForm.title ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: docForm.title ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{saving ? '⏳' : t('Save', 'Сохранить')}</button>
+            </div>
+          </div>
+        )}
+
+        {/* ══ EDIT DOC ══ */}
+        {tab === 'docs' && view === 'edit' && selDoc && (
+          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Document', 'Редактировать документ')}</div>
+            <FField label={t('Category', 'Категория')}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang === 'ru' ? c.labelRu : c.label}</span></button>)}
+              </div>
+            </FField>
+            <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Title (RU)', 'Название (RU)')}><input value={docForm.title_ru} onChange={e => setDocForm(f => ({ ...f, title_ru: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Number / Code', 'Номер / Код')}><input value={docForm.number} onChange={e => setDocForm(f => ({ ...f, number: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16 }} /></FField>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
+            </div>
+            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
+              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pinned', 'Закреплён')}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setView('detail')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Отмена')}</button>
+              <button onClick={handleUpdateDoc} disabled={!docForm.title || saving} style={{ flex: 2, background: docForm.title ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: docForm.title ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{saving ? '⏳' : t('Save Changes', 'Сохранить')}</button>
             </div>
           </div>
         )}
