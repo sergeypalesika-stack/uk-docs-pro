@@ -30,7 +30,9 @@ export async function addDoc(userId: string, doc: {
 }
 
 export async function updateDoc(id: string, fields: Partial<{
-  pinned: boolean; title: string; title_ru: string; notes: string; notes_ru: string
+  pinned: boolean; title: string; title_ru: string
+  number: string; valid_from: string | null; valid_until: string | null
+  notes: string; notes_ru: string; category: string
 }>) {
   return sb().from('documents').update(fields).eq('id', id)
 }
