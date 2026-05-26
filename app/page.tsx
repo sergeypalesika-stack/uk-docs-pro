@@ -877,13 +877,14 @@ export default function Page() {
 
             {Array.from(new Set(todos.map(t => t.week))).sort((a, b) => a - b).map(w => {
               const wL: Record<number, { en: string; ru: string }> = {
-                0: { en: 'Before Arriving', ru: 'До приезда' },
-                1: { en: 'Week 1', ru: 'Неделя 1' },
-                2: { en: 'Week 2', ru: 'Неделя 2' },
-                3: { en: 'Week 3', ru: 'Неделя 3' },
-                4: { en: 'Week 4', ru: 'Неделя 4' },
-                5: { en: 'Week 5', ru: 'Неделя 5' },
-                6: { en: 'Week 6', ru: 'Неделя 6' },
+                0: { en: '📅 Days 1–2 · Arrival', ru: '📅 Дни 1–2 · Прибытие' },
+                1: { en: '📅 Days 3–5 · Critical Steps', ru: '📅 Дни 3–5 · Критически важные шаги' },
+                2: { en: '📅 Week 2 · Housing & School', ru: '📅 Неделя 2 · Жильё и школа' },
+                3: { en: '📅 Week 3 · Benefits & Finances', ru: '📅 Неделя 3 · Пособия и финансы' },
+                4: { en: '📅 Week 3–4 · Work', ru: '📅 Неделя 3–4 · Работа' },
+                5: { en: '📅 Week 4–5 · Infrastructure', ru: '📅 Неделя 4–5 · Обустройство' },
+                6: { en: '📅 Week 6 · Final Checklist', ru: '📅 Неделя 6 · Итоговая проверка' },
+                7: { en: '📅 Later', ru: '📅 Позже' },
               }
               const items = todos.filter(t => t.week === w)
               const doneH = items.filter(t => t.done).length
@@ -953,13 +954,13 @@ export default function Page() {
             <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} placeholder="напр. Записаться к врачу" style={inputStyle} /></FField>
             <FField label={t('Week', 'Неделя')}>
               <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
-                <option value={0}>{t('Before Arriving', 'До приезда')}</option>
-                <option value={1}>{t('Week 1', 'Неделя 1')}</option>
-                <option value={2}>{t('Week 2', 'Неделя 2')}</option>
-                <option value={3}>{t('Week 3', 'Неделя 3')}</option>
-                <option value={4}>{t('Week 4', 'Неделя 4')}</option>
-                <option value={5}>{t('Week 5', 'Неделя 5')}</option>
-                <option value={6}>{t('Week 6', 'Неделя 6')}</option>
+                <option value={0}>{t('Days 1-2 Arrival', 'Дни 1-2 Прибытие')}</option>
+                <option value={1}>{t('Days 3-5 Critical Steps', 'Дни 3-5 Критически важные')}</option>
+                <option value={2}>{t('Week 2 Housing School', 'Неделя 2 Жильё и школа')}</option>
+                <option value={3}>{t('Week 3 Benefits', 'Неделя 3 Пособия и финансы')}</option>
+                <option value={4}>{t('Week 3-4 Work', 'Неделя 3-4 Работа')}</option>
+                <option value={5}>{t('Week 4-5 Infrastructure', 'Неделя 4-5 Обустройство')}</option>
+                <option value={6}>{t('Week 6 Final', 'Неделя 6 Итоговая проверка')}</option>
                 <option value={7}>{t('Later', 'Позже')}</option>
               </select>
             </FField>
@@ -988,13 +989,13 @@ export default function Page() {
             <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} style={inputStyle} /></FField>
             <FField label={t('Week', 'Неделя')}>
               <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
-                <option value={0}>{t('Before Arriving', 'До приезда')}</option>
-                <option value={1}>{t('Week 1', 'Неделя 1')}</option>
-                <option value={2}>{t('Week 2', 'Неделя 2')}</option>
-                <option value={3}>{t('Week 3', 'Неделя 3')}</option>
-                <option value={4}>{t('Week 4', 'Неделя 4')}</option>
-                <option value={5}>{t('Week 5', 'Неделя 5')}</option>
-                <option value={6}>{t('Week 6', 'Неделя 6')}</option>
+                <option value={0}>{t('Days 1-2 Arrival', 'Дни 1-2 Прибытие')}</option>
+                <option value={1}>{t('Days 3-5 Critical Steps', 'Дни 3-5 Критически важные')}</option>
+                <option value={2}>{t('Week 2 Housing School', 'Неделя 2 Жильё и школа')}</option>
+                <option value={3}>{t('Week 3 Benefits', 'Неделя 3 Пособия и финансы')}</option>
+                <option value={4}>{t('Week 3-4 Work', 'Неделя 3-4 Работа')}</option>
+                <option value={5}>{t('Week 4-5 Infrastructure', 'Неделя 4-5 Обустройство')}</option>
+                <option value={6}>{t('Week 6 Final', 'Неделя 6 Итоговая проверка')}</option>
                 <option value={7}>{t('Later', 'Позже')}</option>
               </select>
             </FField>
