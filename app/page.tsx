@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
-import type { Address, DocPhoto } from '@/lib/db'
+import type { Address, DocPhoto, Resume } from '@/lib/db'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -16,8 +16,8 @@ interface Profile { id: string; name: string; name_ru: string; dob: string; nati
 interface TodoItem { id: string; text: string; textRu: string; done: boolean; week: number; category: string }
 
 type Lang    = 'en' | 'ru' | 'uk'
-type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'profile'
-type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export'
+type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'profile'
+type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
 const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6', surface: '#ffffff', bg: '#f1f5fb', border: '#e2e8f4', muted: '#7a8aaa', text: '#1a2035', textSub: '#4a5570', red: '#dc2626', green: '#16a34a' }
@@ -57,6 +57,15 @@ export default function Page() {
   const [selPass,   setSelPass]   = useState<Passport | null>(null)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selAddr,   setSelAddr]   = useState<Address | null>(null)
+  const [resumes,   setResumes]   = useState<Resume[]>([])
+  const [selResume, setSelResume] = useState<Resume | null>(null)
+  const EMPTY_RESUME: Omit<Resume,'id'|'user_id'|'created_at'|'updated_at'> = {
+    title:'', direction:'', company:'', status:'draft',
+    summary:'', skills:'', experience:'', education:'', notes:'',
+    color:'#1a4480', pinned:false
+  }
+  const [resumeForm, setResumeForm] = useState(EMPTY_RESUME)
+  const [cvCopied, setCvCopied] = useState(false)
   const [addrForm,  setAddrForm]  = useState({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
   const [filterCat, setFilterCat] = useState('all')
   const [search,    setSearch]    = useState('')
@@ -84,12 +93,13 @@ export default function Page() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUser(user)
-      const [prof, docs, passes, todos, addrs] = await Promise.all([
+      const [prof, docs, passes, todos, addrs, res] = await Promise.all([
         DB.getProfile(user.id),
         DB.getDocsWithPhotos(user.id),
         DB.getPassports(user.id),
         DB.getTodos(user.id),
         DB.getAddresses(user.id),
+        DB.getResumes(user.id),
       ])
       setProfile(prof)
       setProfForm(prof ?? {})
@@ -97,6 +107,7 @@ export default function Page() {
       setPassports(passes as Passport[])
       setTodos(todos)
       setAddresses(addrs)
+      setResumes(res as Resume[])
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocs(user.id)
       setDocs(freshDocs)
@@ -135,12 +146,12 @@ export default function Page() {
   const exportPrint = () => {
     const name = profile?.name || user?.email || 'User'
     const dob  = profile?.dob ? formatDate(profile.dob) : '—'
-    const expiring = docs.filter(d => { const x = daysUntil(d.valid_until); return x !== null && x >= 0 && x <= 90 })
-    const expired  = docs.filter(d => { const x = daysUntil(d.valid_until); return x !== null && x < 0 })
+    const expiring = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x >= 0 && x <= 90 })
+    const expired  = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x < 0 })
 
     const docRows = docs.map(d => {
       const c = CATEGORIES.find(c => c.id === d.category)
-      const status = d.valid_until ? (daysUntil(d.valid_until)! < 0 ? '❌ EXPIRED' : `✓ ${daysUntil(d.valid_until)}d left`) : '—'
+      const status = d.valid_until ? (daysUntil(d.valid_until ?? '')! < 0 ? '❌ EXPIRED' : `✓ ${daysUntil(d.valid_until ?? '')}d left`) : '—'
       return `<tr><td>${c?.icon ?? ''} ${d.title}</td><td style="font-family:monospace">${d.number || '—'}</td><td>${d.valid_until ? formatDate(d.valid_until) : '—'}</td><td>${status}</td></tr>`
     }).join('')
 
@@ -172,8 +183,8 @@ export default function Page() {
     ${expiring.length > 0 || expired.length > 0 ? `
     <h2>⚠️ Attention Required</h2>
     <table><tr><th>Document</th><th>Status</th></tr>
-    ${expired.map(d=>`<tr class="expired"><td>${d.title}</td><td>EXPIRED ${formatDate(d.valid_until)}</td></tr>`).join('')}
-    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Expires in ${daysUntil(d.valid_until)} days — ${formatDate(d.valid_until)}</td></tr>`).join('')}
+    ${expired.map(d=>`<tr class="expired"><td>${d.title}</td><td>EXPIRED ${formatDate(d.valid_until ?? '')}</td></tr>`).join('')}
+    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Expires in ${daysUntil(d.valid_until ?? '')} days — ${formatDate(d.valid_until ?? '')}</td></tr>`).join('')}
     </table>` : ''}
 
     <h2>📂 Documents (${docs.length})</h2>
@@ -372,6 +383,67 @@ export default function Page() {
     setTodos(nt)
     await DB.toggleTodoDB(user.id, item.id, !item.done)
   }
+
+  // ── RESUME ACTIONS ───────────────────────────────────
+  const handleAddResume = async () => {
+    if (!user || !resumeForm.title) return
+    setSaving(true)
+    const nr = await DB.addResume(user.id, resumeForm)
+    if (nr) setResumes(prev => [nr, ...prev])
+    setResumeForm(EMPTY_RESUME)
+    switchTab('resume')
+    setSaving(false)
+  }
+
+  const handleUpdateResume = async () => {
+    if (!user || !selResume) return
+    setSaving(true)
+    await DB.updateResume(selResume.id, resumeForm)
+    const updated = { ...selResume, ...resumeForm, updated_at: new Date().toISOString() }
+    setResumes(prev => prev.map(r => r.id === selResume.id ? updated : r))
+    setSelResume(updated)
+    setView('resumeDetail')
+    setSaving(false)
+  }
+
+  const handleDeleteResume = async (id: string) => {
+    await DB.deleteResume(id)
+    setResumes(prev => prev.filter(r => r.id !== id))
+    setConfirmDel(null); setSelResume(null); setView('list')
+  }
+
+  const handleToggleResumePin = async (r: Resume) => {
+    await DB.updateResume(r.id, { pinned: !r.pinned })
+    setResumes(prev => prev.map(x => x.id === r.id ? { ...x, pinned: !x.pinned } : x))
+    if (selResume?.id === r.id) setSelResume({ ...r, pinned: !r.pinned })
+  }
+
+  const copyResumeToClipboard = (r: Resume) => {
+    const parts = [
+      r.title,
+      r.direction ? `Position: ${r.direction}` : '',
+      r.company ? `Company: ${r.company}` : '',
+      '',
+      r.summary ? `ABOUT ME\n${r.summary}` : '',
+      r.skills ? `\nKEY SKILLS\n${r.skills}` : '',
+      r.experience ? `\nEXPERIENCE\n${r.experience}` : '',
+      r.education ? `\nEDUCATION\n${r.education}` : '',
+      r.notes ? `\nNOTES\n${r.notes}` : '',
+    ].filter(Boolean).join('\n')
+    navigator.clipboard.writeText(parts)
+  }
+
+  const RESUME_STATUSES = [
+    { id: 'draft',     en: 'Draft',     ru: 'Чернетка',   uk: 'Чернетка',  color: '#546e7a', bg: '#f1f5fb' },
+    { id: 'ready',     en: 'Ready',     ru: 'Готово',      uk: 'Готово',    color: '#2e7d32', bg: '#f0fdf4' },
+    { id: 'sent',      en: 'Sent',      ru: 'Відправлено', uk: 'Відправлено', color: '#1d4ed8', bg: '#eff6ff' },
+    { id: 'interview', en: 'Interview', ru: 'Інтерв'ю',   uk: 'Інтерв'ю', color: '#b45309', bg: '#fff7ed' },
+    { id: 'rejected',  en: 'Rejected',  ru: 'Відмова',     uk: 'Відмова',   color: '#c62828', bg: '#fee2e2' },
+  ]
+  const resumeStatus = (id: string) => RESUME_STATUSES.find(s => s.id === id) ?? RESUME_STATUSES[0]
+
+  const RESUME_COLORS = ['#1a4480','#0369a1','#2e7d32','#b45309','#c62828','#5b21b6','#0f766e','#1a2a4a']
+
   const handleResetTodos = async () => {
     if (!user) return
     await DB.resetTodosDB(user.id)
@@ -1130,6 +1202,305 @@ export default function Page() {
           </div>
         )}
 
+
+        {/* ══════════════════ RESUME TAB ══════════════════ */}
+        {tab === 'resume' && view === 'list' && (
+          <>
+            {resumes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '50px 20px', color: C.muted }}>
+                <div style={{ fontSize: 52, marginBottom: 12 }}>📝</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.navy, marginBottom: 6 }}>
+                  {t('No CVs yet', 'Ще немає CV', 'Ще немає CV')}
+                </div>
+                <div style={{ fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
+                  {t('Store multiple CVs for different roles and companies', 'Зберігайте CV для різних посад та компаній', 'Зберігайте CV для різних посад та компаній')}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Stats bar */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                  {[
+                    { label: t('Total', 'Всього', 'Всього'), val: resumes.length, color: C.navy },
+                    { label: t('Ready', 'Готові', 'Готові'), val: resumes.filter(r=>r.status==='ready').length, color: '#2e7d32' },
+                    { label: t('Sent', 'Надіслані', 'Надіслані'), val: resumes.filter(r=>r.status==='sent'||r.status==='interview').length, color: '#1d4ed8' },
+                  ].map((s,i) => (
+                    <div key={i} style={{ background: C.surface, borderRadius: 12, padding: '10px 8px', textAlign: 'center' as const, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {resumes.filter(r=>r.pinned).length > 0 && (
+                  <SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')}</SLabel>
+                )}
+                {[...resumes.filter(r=>r.pinned), ...resumes.filter(r=>!r.pinned)].map(r => {
+                  const st = resumeStatus(r.status)
+                  return (
+                    <div key={r.id} onClick={() => { setSelResume(r); setView('resumeDetail') }}
+                      style={{ background: C.surface, borderRadius: 14, marginBottom: 10, padding: '14px 16px',
+                        cursor: 'pointer', boxShadow: '0 1px 5px rgba(0,0,0,0.06)',
+                        borderLeft: `4px solid ${r.color}` }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: r.color + '18',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                          📝
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, marginBottom: 4 }}>
+                            {r.pinned && <span style={{ fontSize: 11 }}>📌</span>}
+                            <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{r.title}</span>
+                            <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+                              {lang === 'uk' ? st.uk : lang === 'ru' ? st.ru : st.en}
+                            </span>
+                          </div>
+                          {r.direction && <div style={{ fontSize: 12, color: C.blue, fontWeight: 600 }}>🎯 {r.direction}</div>}
+                          {r.company && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>🏢 {r.company}</div>}
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
+                            {t('Updated', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)}
+                          </div>
+                        </div>
+                        <div style={{ color: '#cbd5e0', fontSize: 20 }}>›</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+            <button onClick={() => { setResumeForm(EMPTY_RESUME); setView('addResume') }}
+              style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28,
+                background: '#1a4480', color: '#fff', border: 'none', fontSize: 28, cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(26,68,128,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          </>
+        )}
+
+        {/* ══ CV DETAIL ══ */}
+        {tab === 'resume' && view === 'resumeDetail' && selResume && (() => {
+          const st = resumeStatus(selResume.status)
+          return (
+            <>
+              <button onClick={() => { setView('list'); setSelResume(null) }}
+                style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                ← {t('Back', 'Назад', 'Назад')}
+              </button>
+
+              {/* Hero */}
+              <div style={{ background: `linear-gradient(135deg, ${selResume.color}, ${selResume.color}cc)`,
+                borderRadius: 20, padding: '24px 22px 20px', marginBottom: 3, color: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{selResume.title}</div>
+                    {selResume.direction && <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 3 }}>🎯 {selResume.direction}</div>}
+                    {selResume.company && <div style={{ fontSize: 13, opacity: 0.7 }}>🏢 {selResume.company}</div>}
+                  </div>
+                  <span style={{ background: st.bg, color: st.color, fontSize: 12, fontWeight: 700,
+                    padding: '4px 10px', borderRadius: 20, flexShrink: 0, marginLeft: 10 }}>
+                    {lang === 'uk' ? st.uk : lang === 'ru' ? st.ru : st.en}
+                  </span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12 }}>
+                {selResume.summary && (
+                  <DRow label={t('About me', 'Про мене', 'Про мене')}>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' as const }}>{selResume.summary}</span>
+                  </DRow>
+                )}
+                {selResume.skills && (
+                  <DRow label={t('Key Skills', 'Ключові навички', 'Ключові навички')}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                      {selResume.skills.split(/[,;\n]+/).filter(Boolean).map((sk, i) => (
+                        <span key={i} style={{ background: selResume.color + '18', color: selResume.color,
+                          fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
+                          {sk.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  </DRow>
+                )}
+                {selResume.experience && (
+                  <DRow label={t('Experience', 'Досвід роботи', 'Досвід роботи')}>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.8, whiteSpace: 'pre-wrap' as const }}>{selResume.experience}</span>
+                  </DRow>
+                )}
+                {selResume.education && (
+                  <DRow label={t('Education', 'Освіта', 'Освіта')}>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' as const }}>{selResume.education}</span>
+                  </DRow>
+                )}
+                {selResume.notes && (
+                  <DRow label={t('Notes', 'Нотатки', 'Нотатки')}>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>{selResume.notes}</span>
+                  </DRow>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <button onClick={() => {
+                  setResumeForm({ title: selResume.title, direction: selResume.direction, company: selResume.company,
+                    status: selResume.status, summary: selResume.summary, skills: selResume.skills,
+                    experience: selResume.experience, education: selResume.education, notes: selResume.notes,
+                    color: selResume.color, pinned: selResume.pinned })
+                  setView('editResume')
+                }} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 12,
+                  padding: 14, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#1d4ed8' }}>
+                  ✏️ {t('Edit', 'Редагувати', 'Редагувати')}
+                </button>
+                <button onClick={() => {
+                  copyResumeToClipboard(selResume)
+                  setCvCopied(true)
+                  setTimeout(() => setCvCopied(false), 2000)
+                }} style={{ background: cvCopied ? '#f0fdf4' : C.bg,
+                  border: `1.5px solid ${cvCopied ? '#86efac' : C.border}`,
+                  borderRadius: 12, padding: 14, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  color: cvCopied ? '#166534' : C.textSub }}>
+                  {cvCopied ? '✓ Copied!' : `⎘ ${t('Copy CV', 'Копіювати CV', 'Копіювати CV')}`}
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <button onClick={() => handleToggleResumePin(selResume)} style={{
+                  background: selResume.pinned ? '#fef9c3' : C.surface,
+                  border: `1.5px solid ${selResume.pinned ? '#fde047' : C.border}`,
+                  borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  color: selResume.pinned ? '#854d0e' : C.textSub }}>
+                  📌 {selResume.pinned ? t('Unpin','Відкріпити','Відкріпити') : t('Pin','Закріпити','Закріпити')}
+                </button>
+                <button onClick={() => setConfirmDel(selResume.id)}
+                  style={{ background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 12, padding: 12,
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>
+                  🗑 {t('Delete', 'Видалити', 'Видалити')}
+                </button>
+              </div>
+
+              {confirmDel === selResume.id && (
+                <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
+                  <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>
+                    {t('Delete this CV?', 'Видалити це CV?', 'Видалити це CV?')}
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
+                    <button onClick={() => handleDeleteResume(selResume.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
+
+        {/* ══ ADD / EDIT CV FORM ══ */}
+        {tab === 'resume' && (view === 'addResume' || view === 'editResume') && (
+          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>
+              {view === 'addResume' ? `📝 ${t('New CV', 'Нове CV', 'Нове CV')}` : `✏️ ${t('Edit CV', 'Редагувати CV', 'Редагувати CV')}`}
+            </div>
+
+            {/* Color picker */}
+            <FField label={t('Colour', 'Колір', 'Колір')}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                {RESUME_COLORS.map(col => (
+                  <button key={col} onClick={() => setResumeForm(f => ({ ...f, color: col }))}
+                    style={{ width: 34, height: 34, borderRadius: 8, background: col, cursor: 'pointer',
+                      border: resumeForm.color === col ? '3px solid #1a202c' : '2px solid transparent',
+                      boxShadow: resumeForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
+                ))}
+              </div>
+            </FField>
+
+            <FField label={t('CV Title', 'Назва CV', 'Назва CV')}>
+              <input value={resumeForm.title} onChange={e => setResumeForm(f=>({...f,title:e.target.value}))}
+                placeholder={t('e.g. HVAC Engineer — Large Companies', 'напр. HVAC Інженер — Великі компанії', 'напр. HVAC Інженер — Великі компанії')}
+                style={inputStyle} />
+            </FField>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <FField label={t('Target Role', 'Бажана посада', 'Бажана посада')}>
+                <input value={resumeForm.direction} onChange={e => setResumeForm(f=>({...f,direction:e.target.value}))}
+                  placeholder="HVAC Engineer" style={inputStyle} />
+              </FField>
+              <FField label={t('Company', 'Компанія', 'Компанія')}>
+                <input value={resumeForm.company} onChange={e => setResumeForm(f=>({...f,company:e.target.value}))}
+                  placeholder={t('Optional', 'Необов'язково', 'Необов'язково')} style={inputStyle} />
+              </FField>
+            </div>
+
+            <FField label={t('Status', 'Статус', 'Статус')}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                {RESUME_STATUSES.map(s => (
+                  <button key={s.id} onClick={() => setResumeForm(f=>({...f,status:s.id as Resume['status']}))}
+                    style={{ background: resumeForm.status===s.id ? s.color : C.bg,
+                      color: resumeForm.status===s.id ? '#fff' : C.textSub,
+                      border: `1.5px solid ${resumeForm.status===s.id ? s.color : C.border}`,
+                      borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    {lang === 'uk' ? s.uk : lang === 'ru' ? s.ru : s.en}
+                  </button>
+                ))}
+              </div>
+            </FField>
+
+            <FField label={t('About me / Summary', 'Про мене / Резюме', 'Про мене / Резюме')}>
+              <textarea value={resumeForm.summary} onChange={e => setResumeForm(f=>({...f,summary:e.target.value}))}
+                rows={4} placeholder={t('Brief professional summary…', 'Короткий професійний опис…', 'Короткий професійний опис…')}
+                style={{ ...inputStyle, resize: 'vertical' as const }} />
+            </FField>
+
+            <FField label={t('Key Skills (comma separated)', 'Ключові навички (через кому)', 'Ключові навички (через кому)')}>
+              <textarea value={resumeForm.skills} onChange={e => setResumeForm(f=>({...f,skills:e.target.value}))}
+                rows={3} placeholder="F-Gas certified, CSCS Green Card, HVAC installation, Air conditioning…"
+                style={{ ...inputStyle, resize: 'vertical' as const }} />
+            </FField>
+
+            <FField label={t('Work Experience', 'Досвід роботи', 'Досвід роботи')}>
+              <textarea value={resumeForm.experience} onChange={e => setResumeForm(f=>({...f,experience:e.target.value}))}
+                rows={6} placeholder={t('Job title — Company — Dates\nKey achievements…', 'Посада — Компанія — Дати\nОсновні досягнення…', 'Посада — Компанія — Дати\nОсновні досягнення…')}
+                style={{ ...inputStyle, resize: 'vertical' as const }} />
+            </FField>
+
+            <FField label={t('Education & Qualifications', 'Освіта та кваліфікації', 'Освіта та кваліфікації')}>
+              <textarea value={resumeForm.education} onChange={e => setResumeForm(f=>({...f,education:e.target.value}))}
+                rows={4} placeholder={t('Degree / Cert — Institution — Year…', 'Ступінь / Серт — Заклад — Рік…', 'Ступінь / Серт — Заклад — Рік…')}
+                style={{ ...inputStyle, resize: 'vertical' as const }} />
+            </FField>
+
+            <FField label={t('Notes (private)', 'Нотатки (приватні)', 'Нотатки (приватні)')}>
+              <textarea value={resumeForm.notes} onChange={e => setResumeForm(f=>({...f,notes:e.target.value}))}
+                rows={2} placeholder={t('Personal notes about this application…', 'Особисті нотатки про цю заявку…', 'Особисті нотатки про цю заявку…')}
+                style={{ ...inputStyle, resize: 'vertical' as const }} />
+            </FField>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer',
+              background: resumeForm.pinned ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px',
+              border: `1.5px solid ${resumeForm.pinned ? '#fde047' : C.border}` }}
+              onClick={() => setResumeForm(f=>({...f,pinned:!f.pinned}))}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: resumeForm.pinned ? '#f59e0b' : 'transparent',
+                border: resumeForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: 13, color: '#fff', flexShrink: 0 }}>
+                {resumeForm.pinned ? '✓' : ''}
+              </div>
+              <span style={{ fontSize: 13, color: resumeForm.pinned ? '#854d0e' : C.textSub, fontWeight: 600 }}>
+                📌 {t('Pin this CV', 'Закріпити це CV', 'Закріпити це CV')}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => view === 'addResume' ? switchTab('resume') : setView('resumeDetail')}
+                style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10,
+                  padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>
+                {t('Cancel', 'Скасувати', 'Скасувати')}
+              </button>
+              <button onClick={view === 'addResume' ? handleAddResume : handleUpdateResume}
+                disabled={!resumeForm.title || saving}
+                style={{ flex: 2, background: resumeForm.title ? '#1a4480' : '#cbd5e0', border: 'none',
+                  borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
+                {saving ? '⏳' : view === 'addResume' ? t('Save CV', 'Зберегти CV', 'Зберегти CV') : t('Save Changes', 'Зберегти', 'Зберегти')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {tab === 'todo' && view === 'list' && (
           <>
             {/* Progress bar */}
@@ -1431,11 +1802,12 @@ export default function Page() {
       {/* ══ BOTTOM TAB BAR ══ */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #e2e8f4', boxShadow: '0 -4px 20px rgba(15,31,61,0.1)', zIndex: 90, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {([
-          { id: 'docs',     icon: '📂', en: 'Docs',      ru: 'Доки',    uk: 'Доки' },
-          { id: 'passport', icon: '📘', en: 'Passport',  ru: 'Паспорт', uk: 'Паспорт' },
-          { id: 'address',  icon: '📍', en: 'Addresses', ru: 'Адреси',  uk: 'Адреси' },
-          { id: 'todo',     icon: '✅', en: 'Tasks',     ru: 'Задачі',  uk: 'Завдання' },
-          { id: 'profile',  icon: '👤', en: 'Profile',   ru: 'Профіль', uk: 'Профіль' },
+          { id: 'docs',     icon: '📂', en: 'Docs',    ru: 'Доки',   uk: 'Доки' },
+          { id: 'passport', icon: '📘', en: 'Pass.',    ru: 'Паспорт',uk: 'Паспорт' },
+          { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',     uk: 'CV' },
+          { id: 'address',  icon: '📍', en: 'Addr.',    ru: 'Адреси', uk: 'Адреси' },
+          { id: 'todo',     icon: '✅', en: 'Tasks',    ru: 'Задачі', uk: 'Завдання' },
+          { id: 'profile',  icon: '👤', en: 'Profile',  ru: 'Профіль',uk: 'Профіль' },
         ] as { id: MainTab; icon: string; en: string; ru: string; uk: string }[]).map(tb => (
           <button key={tb.id} onClick={() => switchTab(tb.id)} style={{
             flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px',
