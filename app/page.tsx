@@ -17,7 +17,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru' | 'uk'
 type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'profile'
-type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo'
+type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export'
 
 // ── COLORS
 const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6', surface: '#ffffff', bg: '#f1f5fb', border: '#e2e8f4', muted: '#7a8aaa', text: '#1a2035', textSub: '#4a5570', red: '#dc2626', green: '#16a34a' }
@@ -107,6 +107,116 @@ export default function Page() {
     load()
   }, [])
 
+  // ── EXPORT FUNCTIONS ──────────────────────────────────
+  const exportCSV = () => {
+    const rows: string[][] = [
+      ['Category', 'Title', 'Title RU', 'Number', 'Valid From', 'Valid Until', 'Notes'],
+    ]
+    docs.forEach(d => {
+      const c = CATEGORIES.find(c => c.id === d.category)
+      rows.push([
+        c?.label ?? d.category,
+        d.title, d.title_ru ?? '',
+        d.number ?? '',
+        d.valid_from ?? '', d.valid_until ?? '',
+        d.notes ?? '',
+      ])
+    })
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `uk-docs-${new Date().toISOString().slice(0,10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportPrint = () => {
+    const name = profile?.name || user?.email || 'User'
+    const dob  = profile?.dob ? formatDate(profile.dob) : '—'
+    const expiring = docs.filter(d => { const x = daysUntil(d.valid_until); return x !== null && x >= 0 && x <= 90 })
+    const expired  = docs.filter(d => { const x = daysUntil(d.valid_until); return x !== null && x < 0 })
+
+    const docRows = docs.map(d => {
+      const c = CATEGORIES.find(c => c.id === d.category)
+      const status = d.valid_until ? (daysUntil(d.valid_until)! < 0 ? '❌ EXPIRED' : `✓ ${daysUntil(d.valid_until)}d left`) : '—'
+      return `<tr><td>${c?.icon ?? ''} ${d.title}</td><td style="font-family:monospace">${d.number || '—'}</td><td>${d.valid_until ? formatDate(d.valid_until) : '—'}</td><td>${status}</td></tr>`
+    }).join('')
+
+    const addrRows = addresses.map(a =>
+      `<tr><td>${a.is_home ? '🏠' : '📍'} <b>${a.label}</b></td><td>${[a.line1,a.line2,a.city,a.postcode,a.country].filter(Boolean).join(', ')}</td></tr>`
+    ).join('')
+
+    const todoRows = todos.map(t =>
+      `<tr><td>${t.done ? '✅' : '⬜'}</td><td style="text-decoration:${t.done?'line-through':'none'};color:${t.done?'#aaa':'#000'}">${t.text}</td></tr>`
+    ).join('')
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>UK Docs — ${name}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 13px; color: #111; max-width: 800px; margin: 0 auto; padding: 20px; }
+      h1 { color: #0f1f3d; border-bottom: 3px solid #0f1f3d; padding-bottom: 8px; }
+      h2 { color: #2457a4; margin-top: 24px; margin-bottom: 8px; font-size: 15px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+      th { background: #0f1f3d; color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; }
+      td { padding: 7px 10px; border-bottom: 1px solid #e2e8f4; vertical-align: top; }
+      tr:nth-child(even) td { background: #f8fafc; }
+      .warn { background: #fff7ed !important; color: #c2410c; font-weight: bold; }
+      .expired { background: #fee2e2 !important; color: #dc2626; font-weight: bold; }
+      .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+    <h1>🇬🇧 UK Docs — ${name}</h1>
+    <div class="meta">Generated: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})} &nbsp;|&nbsp; DOB: ${dob} &nbsp;|&nbsp; ${user?.email}</div>
+
+    ${expiring.length > 0 || expired.length > 0 ? `
+    <h2>⚠️ Attention Required</h2>
+    <table><tr><th>Document</th><th>Status</th></tr>
+    ${expired.map(d=>`<tr class="expired"><td>${d.title}</td><td>EXPIRED ${formatDate(d.valid_until)}</td></tr>`).join('')}
+    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Expires in ${daysUntil(d.valid_until)} days — ${formatDate(d.valid_until)}</td></tr>`).join('')}
+    </table>` : ''}
+
+    <h2>📂 Documents (${docs.length})</h2>
+    <table><tr><th>Document</th><th>Number / Code</th><th>Expires</th><th>Status</th></tr>${docRows}</table>
+
+    ${addresses.length > 0 ? `<h2>📍 Addresses (${addresses.length})</h2>
+    <table><tr><th>Label</th><th>Address</th></tr>${addrRows}</table>` : ''}
+
+    <h2>✅ Action Plan (${todos.filter(t=>t.done).length}/${todos.length} done)</h2>
+    <table><tr><th style="width:30px"></th><th>Task</th></tr>${todoRows}</table>
+    </body></html>`
+
+    const w = window.open('', '_blank', 'width=900,height=700')!
+    w.document.write(html)
+    w.document.close()
+    setTimeout(() => w.print(), 500)
+  }
+
+  const [copyDone, setCopyDone] = useState(false)
+  const exportClipboard = () => {
+    const name = profile?.name || user?.email || ''
+    const lines: string[] = [
+      `UK DOCS — ${name}`,
+      `Generated: ${new Date().toLocaleDateString('en-GB')}`,
+      '',
+      '=== DOCUMENTS ===',
+    ]
+    docs.forEach(d => {
+      lines.push(`• ${d.title}${d.number ? ' — ' + d.number : ''}${d.valid_until ? ' (until ' + formatDate(d.valid_until) + ')' : ''}`)
+    })
+    if (addresses.length > 0) {
+      lines.push('', '=== ADDRESSES ===')
+      addresses.forEach(a => {
+        lines.push(`• ${a.is_home ? '[HOME] ' : ''}${a.label}: ${[a.line1,a.city,a.postcode].filter(Boolean).join(', ')}`)
+      })
+    }
+    lines.push('', '=== TASKS ===')
+    todos.forEach(t => lines.push(`${t.done ? '[✓]' : '[ ]'} ${t.text}`))
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopyDone(true)
+    setTimeout(() => setCopyDone(false), 2500)
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/auth'
@@ -181,25 +291,49 @@ export default function Page() {
 
   // ── IMAGE COMPRESSION → base64 (max 900px, ~150KB)
   const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        const MAX = 900
-        let { width, height } = img
-        if (width > MAX || height > MAX) {
-          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
-          else { width = Math.round(width * MAX / height); height = MAX }
-        }
-        const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
-        URL.revokeObjectURL(url)
-        const result = canvas.toDataURL('image/jpeg', 0.70)
-        resolve(result)
+    return new Promise((resolve) => {
+      // Fallback: raw base64 if canvas fails
+      const fallback = () => {
+        const r = new FileReader()
+        r.onload = e => resolve(e.target?.result as string ?? '')
+        r.onerror = () => resolve('')
+        r.readAsDataURL(file)
       }
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')) }
-      img.src = url
+      try {
+        const img = new Image()
+        const url = URL.createObjectURL(file)
+        img.onload = () => {
+          try {
+            const MAX = 900
+            let { width, height } = img
+            if (width > MAX || height > MAX) {
+              if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+              else { width = Math.round(width * MAX / height); height = MAX }
+            }
+            const canvas = document.createElement('canvas')
+            canvas.width = width; canvas.height = height
+            const ctx = canvas.getContext('2d')
+            if (!ctx) { URL.revokeObjectURL(url); fallback(); return }
+            ctx.drawImage(img, 0, 0, width, height)
+            URL.revokeObjectURL(url)
+            const result = canvas.toDataURL('image/jpeg', 0.72)
+            // If still too large, compress harder
+            if (result.length > 1400000) {
+              const c2 = document.createElement('canvas')
+              const M2 = 600
+              let w2 = width, h2 = height
+              if (w2 > M2) { h2 = Math.round(h2 * M2 / w2); w2 = M2 }
+              c2.width = w2; c2.height = h2
+              c2.getContext('2d')!.drawImage(img, 0, 0, w2, h2)
+              resolve(c2.toDataURL('image/jpeg', 0.60))
+            } else {
+              resolve(result)
+            }
+          } catch { URL.revokeObjectURL(url); fallback() }
+        }
+        img.onerror = () => { URL.revokeObjectURL(url); fallback() }
+        img.src = url
+      } catch { fallback() }
     })
   }
 
@@ -397,6 +531,12 @@ export default function Page() {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
 
+      {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
+      <input ref={docPhotoRef}   type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docPhotoRef.current)docPhotoRef.current.value=''}} />
+      <input ref={docCameraRef}  type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docCameraRef.current)docCameraRef.current.value=''}} />
+      <input ref={passPhotoRef}  type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passPhotoRef.current)passPhotoRef.current.value=''}} />
+      <input ref={passCameraRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passCameraRef.current)passCameraRef.current.value=''}} />
+
       {/* ══ HEADER ══ */}
       <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 20px rgba(0,0,0,0.25)' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 16px' }}>
@@ -538,31 +678,7 @@ export default function Page() {
                   style={{ ...inputStyle, marginBottom: 10, fontSize: 13 }}
                 />
 
-                {/* Hidden: gallery picker */}
-                <input
-                  ref={docPhotoRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={e => {
-                    const file = e.target.files?.[0]
-                    if (file) handleAddDocPhoto(file)
-                    if (docPhotoRef.current) docPhotoRef.current.value = ''
-                  }}
-                />
-                {/* Hidden: camera only */}
-                <input
-                  ref={docCameraRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  style={{ display: 'none' }}
-                  onChange={e => {
-                    const file = e.target.files?.[0]
-                    if (file) handleAddDocPhoto(file)
-                    if (docCameraRef.current) docCameraRef.current.value = ''
-                  }}
-                />
+
 
                 {saving ? (
                   <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
@@ -745,10 +861,7 @@ export default function Page() {
               <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>{t('Add page photo', 'Додати фото сторінки', 'Додати фото сторінки')}</div>
                 <input value={photoLabel} onChange={e => setPhotoLabel(e.target.value)} placeholder={t('Label (e.g. Main page)', 'Подпись (напр. Главная страница)')} style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
-                {/* Gallery */}
-                <input ref={passPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); if (passPhotoRef.current) passPhotoRef.current.value = '' }} />
-                {/* Camera */}
-                <input ref={passCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); if (passCameraRef.current) passCameraRef.current.value = '' }} />
+
 
                 {saving ? (
                   <div style={{ textAlign: 'center', padding: '12px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
@@ -1186,10 +1299,13 @@ export default function Page() {
               <div style={{ marginTop: 12, fontSize: 12, opacity: 0.4 }}>{user?.email}</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
               <button onClick={() => { setProfForm(profile ?? {}); setView('editProfile') }} style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.navy }}>✏️ {t('Edit Profile', 'Редагувати', 'Редагувати')}</button>
               <button onClick={signOut} style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.red }}>🚪 {t('Sign Out', 'Вийти', 'Вийти')}</button>
             </div>
+            <button onClick={() => setView('export')} style={{ width: '100%', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#166534', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              📤 {t('Export my data', 'Експортувати дані', 'Експортувати дані')}
+            </button>
 
             <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>🔒 {t('Privacy & Security', 'Конфіденційність', 'Конфіденційність')}</div>
@@ -1204,6 +1320,85 @@ export default function Page() {
                   <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.4 }}>{lang === 'ru' ? item.ru : item.en}</span>
                 </div>
               ))}
+            </div>
+          </>
+        )}
+
+
+        {/* ══ EXPORT VIEW ══ */}
+        {tab === 'profile' && view === 'export' && (
+          <>
+            <button onClick={() => setView('list')} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
+
+            <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 6 }}>
+                📤 {t('Export Data', 'Експорт даних', 'Експорт даних')}
+              </div>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>
+                {t('Download your data as a file', 'Завантажте дані у вигляді файлу', 'Завантажте дані у вигляді файлу')}
+              </div>
+
+              {/* Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
+                {[
+                  { icon: '📄', count: docs.length,      label: t('Documents','Документи','Документи') },
+                  { icon: '📍', count: addresses.length,  label: t('Addresses','Адреси','Адреси') },
+                  { icon: '✅', count: todos.filter(t=>t.done).length + '/' + todos.length, label: t('Tasks','Завдання','Завдання') },
+                ].map((s,i) => (
+                  <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' as const }}>
+                    <div style={{ fontSize: 20 }}>{s.icon}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: C.navy }}>{s.count}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Export buttons */}
+              {[
+                {
+                  icon: '📊',
+                  title: t('Documents — CSV', 'Документи — CSV', 'Документи — CSV'),
+                  desc: t('Open in Excel / Google Sheets', 'Відкрити в Excel / Google Sheets', 'Відкрити в Excel / Google Sheets'),
+                  color: '#166534', bg: '#f0fdf4', border: '#86efac',
+                  action: () => exportCSV(),
+                },
+                {
+                  icon: '🖨️',
+                  title: t('Print / Save as PDF', 'Друк / Зберегти як PDF', 'Друк / Зберегти як PDF'),
+                  desc: t('Full summary — print or save PDF', 'Повне зведення — роздрукувати або зберегти PDF', 'Повне зведення — роздрукувати або зберегти PDF'),
+                  color: '#1d4ed8', bg: '#eff6ff', border: '#93c5fd',
+                  action: () => exportPrint(),
+                },
+                {
+                  icon: copyDone ? '✅' : '📋',
+                  title: copyDone ? t('Copied!', 'Скопійовано!', 'Скопійовано!') : t('Copy all to clipboard', 'Скопіювати все в буфер', 'Скопіювати все в буфер'),
+                  desc: t('Paste into any app', 'Вставити в будь-який додаток', 'Вставити в будь-який додаток'),
+                  color: copyDone ? '#166534' : '#7c3aed', bg: copyDone ? '#f0fdf4' : '#f5f3ff', border: copyDone ? '#86efac' : '#c4b5fd',
+                  action: () => exportClipboard(),
+                },
+              ].map((btn, i) => (
+                <button key={i} onClick={btn.action} style={{
+                  width: '100%', background: btn.bg, border: `1.5px solid ${btn.border}`,
+                  borderRadius: 14, padding: '16px 18px', cursor: 'pointer', marginBottom: 10,
+                  display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' as const,
+                }}>
+                  <span style={{ fontSize: 32, flexShrink: 0 }}>{btn.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: btn.color, marginBottom: 3 }}>{btn.title}</div>
+                    <div style={{ fontSize: 12, color: C.muted }}>{btn.desc}</div>
+                  </div>
+                </button>
+              ))}
+
+              <div style={{ background: C.bg, borderRadius: 10, padding: '12px 14px', marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+                  🔒 {t(
+                    'Export contains only your personal data. Never share files with sensitive documents publicly.',
+                    'Експорт містить лише ваші особисті дані. Не діліться файлами з конфіденційними документами публічно.',
+                    'Експорт містить лише ваші особисті дані. Не діліться файлами з конфіденційними документами публічно.'
+                  )}
+                </div>
+              </div>
             </div>
           </>
         )}
