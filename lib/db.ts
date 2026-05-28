@@ -197,3 +197,42 @@ export async function getDocsWithPhotos(userId: string) {
     .order('created_at', { ascending: false })
   return data ?? []
 }
+
+// ── SUPABASE STORAGE (for photos) ────────────────────
+export async function uploadPhotoToStorage(
+  userId: string,
+  file: Blob,
+  path: string
+): Promise<string | null> {
+  const { data, error } = await sb()
+    .storage
+    .from('photos')
+    .upload(`${userId}/${path}`, file, {
+      contentType: 'image/jpeg',
+      upsert: true,
+    })
+  if (error) { console.error('Storage upload error:', error); return null }
+  const { data: urlData } = sb().storage.from('photos').getPublicUrl(data.path)
+  return urlData.publicUrl
+}
+
+export async function deletePhotoFromStorage(userId: string, path: string) {
+  return sb().storage.from('photos').remove([`${userId}/${path}`])
+}
+
+// Updated: store URL instead of base64
+export async function addDocPhotoUrl(documentId: string, userId: string, label: string, photoUrl: string) {
+  const { data } = await sb()
+    .from('document_photos')
+    .insert({ document_id: documentId, user_id: userId, label, data_url: photoUrl })
+    .select().single()
+  return data as DocPhoto | null
+}
+
+export async function addPassportPhotoUrl(passportId: string, userId: string, label: string, photoUrl: string) {
+  const { data } = await sb()
+    .from('passport_photos')
+    .insert({ passport_id: passportId, user_id: userId, label, data_url: photoUrl })
+    .select().single()
+  return data
+}
