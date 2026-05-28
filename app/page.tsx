@@ -70,6 +70,7 @@ export default function Page() {
   const [photoLabel, setPhotoLabel] = useState('')
   const passPhotoRef = useRef<HTMLInputElement>(null)
   const docPhotoRef  = useRef<HTMLInputElement>(null)
+  const docCameraRef = useRef<HTMLInputElement>(null)
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
 
@@ -506,11 +507,12 @@ export default function Page() {
                   placeholder={t('Label (e.g. Front side)', 'Підпис (напр. Лицьова сторона)', 'Підпис (напр. Лицьова сторона)')}
                   style={{ ...inputStyle, marginBottom: 10, fontSize: 13 }}
                 />
+
+                {/* Hidden: gallery picker */}
                 <input
                   ref={docPhotoRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   style={{ display: 'none' }}
                   onChange={e => {
                     const file = e.target.files?.[0]
@@ -518,12 +520,38 @@ export default function Page() {
                     if (docPhotoRef.current) docPhotoRef.current.value = ''
                   }}
                 />
-                <button
-                  onClick={() => docPhotoRef.current?.click()}
-                  disabled={saving}
-                  style={{ width: '100%', background: saving ? '#94a3b8' : C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  {saving ? '⏳ Uploading…' : `📷 ${t('Take / Choose Photo', 'Сфотографувати / Вибрати', 'Сфотографувати / Вибрати')}`}
-                </button>
+                {/* Hidden: camera only */}
+                <input
+                  ref={docCameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) handleAddDocPhoto(file)
+                    if (docCameraRef.current) docCameraRef.current.value = ''
+                  }}
+                />
+
+                {saving ? (
+                  <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button
+                      onClick={() => docCameraRef.current?.click()}
+                      style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 24 }}>📷</span>
+                      <span>{t('Camera', 'Камера', 'Камера')}</span>
+                    </button>
+                    <button
+                      onClick={() => docPhotoRef.current?.click()}
+                      style={{ background: '#eff6ff', color: C.blue, border: `1.5px solid #93c5fd`, borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 24 }}>🖼️</span>
+                      <span>{t('Gallery', 'Галерея', 'Галерея')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -687,10 +715,25 @@ export default function Page() {
               <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>{t('Add page photo', 'Додати фото сторінки', 'Додати фото сторінки')}</div>
                 <input value={photoLabel} onChange={e => setPhotoLabel(e.target.value)} placeholder={t('Label (e.g. Main page)', 'Подпись (напр. Главная страница)')} style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
-                <input ref={passPhotoRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); if (passPhotoRef.current) passPhotoRef.current.value = '' }} />
-                <button onClick={() => passPhotoRef.current?.click()} disabled={saving} style={{ width: '100%', background: saving ? '#94a3b8' : '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 14px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                  {saving ? '⏳ Uploading…' : `📷 ${t('Take / Choose Photo', 'Сфотографувати / Вибрати', 'Сфотографувати / Вибрати')}`}
-                </button>
+                {/* Gallery */}
+                <input ref={passPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); if (passPhotoRef.current) passPhotoRef.current.value = '' }} />
+                {/* Camera */}
+                <input ref={passPhotoRef} type="file" accept="image/*" capture="environment" id="pass-camera-input" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); const el = document.getElementById('pass-camera-input') as HTMLInputElement; if(el) el.value = '' }} />
+
+                {saving ? (
+                  <div style={{ textAlign: 'center', padding: '12px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <button onClick={() => (document.getElementById('pass-camera-input') as HTMLInputElement)?.click()} style={{ background: '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 24 }}>📷</span>
+                      <span>{t('Camera', 'Камера', 'Камера')}</span>
+                    </button>
+                    <button onClick={() => passPhotoRef.current?.click()} style={{ background: '#e0f2fe', color: '#0369a1', border: '1.5px solid #7dd3fc', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 24 }}>🖼️</span>
+                      <span>{t('Gallery', 'Галерея', 'Галерея')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
