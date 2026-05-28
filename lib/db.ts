@@ -156,3 +156,44 @@ export async function setHomeAddress(userId: string, id: string) {
   // set new home
   return sb().from('addresses').update({ is_home: true }).eq('id', id)
 }
+
+// ── DOCUMENT PHOTOS ──────────────────────────────────
+export interface DocPhoto {
+  id: string
+  document_id: string
+  user_id: string
+  label: string
+  data_url: string
+  added_at: string
+}
+
+export async function getDocPhotos(documentId: string) {
+  const { data } = await sb()
+    .from('document_photos')
+    .select('*')
+    .eq('document_id', documentId)
+    .order('added_at', { ascending: true })
+  return (data ?? []) as DocPhoto[]
+}
+
+export async function addDocPhoto(documentId: string, userId: string, label: string, dataUrl: string) {
+  const { data } = await sb()
+    .from('document_photos')
+    .insert({ document_id: documentId, user_id: userId, label, data_url: dataUrl })
+    .select().single()
+  return data as DocPhoto | null
+}
+
+export async function deleteDocPhoto(id: string) {
+  return sb().from('document_photos').delete().eq('id', id)
+}
+
+// Get all docs with their photos
+export async function getDocsWithPhotos(userId: string) {
+  const { data } = await sb()
+    .from('documents')
+    .select('*, document_photos(*)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  return data ?? []
+}
