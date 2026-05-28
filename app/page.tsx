@@ -109,8 +109,8 @@ export default function Page() {
       setAddresses(addrs)
       setResumes(res as Resume[])
       await DB.seedDefaultDocs(user.id)
-      const freshDocs = await DB.getDocs(user.id)
-      setDocs(freshDocs)
+      const freshDocs = await DB.getDocsWithPhotos(user.id)
+      setDocs(freshDocs as Doc[])
       const saved = localStorage.getItem('uk_lang') as Lang
       if (saved) setLang(saved)
       setLoading(false)
