@@ -179,48 +179,24 @@ export default function Page() {
     setConfirmDel(null); setSelPass(null); setView('list')
   }
 
-  // ── IMAGE COMPRESSION + STORAGE UPLOAD
-  const compressAndUpload = async (
-    file: File,
-    storagePath: string
-  ): Promise<string> => {
+  // ── IMAGE COMPRESSION → base64 (max 900px, ~150KB)
+  const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
       const url = URL.createObjectURL(file)
-      img.onload = async () => {
-        try {
-          // Resize to max 1000px
-          const MAX = 1000
-          let { width, height } = img
-          if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX }
-          else if (height > MAX) { width = Math.round(width * MAX / height); height = MAX }
-
-          const canvas = document.createElement('canvas')
-          canvas.width = width; canvas.height = height
-          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
-          URL.revokeObjectURL(url)
-
-          // Convert to blob
-          canvas.toBlob(async (blob) => {
-            if (!blob) { reject(new Error('Canvas to blob failed')); return }
-
-            // Try Supabase Storage first
-            const storageUrl = await DB.uploadPhotoToStorage(user!.id, blob, storagePath)
-            if (storageUrl) {
-              resolve(storageUrl)
-              return
-            }
-
-            // Fallback: use smaller base64 (max 600px, quality 0.6)
-            const canvas2 = document.createElement('canvas')
-            const MAX2 = 600
-            let w2 = width, h2 = height
-            if (w2 > MAX2) { h2 = Math.round(h2 * MAX2 / w2); w2 = MAX2 }
-            canvas2.width = w2; canvas2.height = h2
-            canvas2.getContext('2d')!.drawImage(img, 0, 0, w2, h2)
-            resolve(canvas2.toDataURL('image/jpeg', 0.6))
-          }, 'image/jpeg', 0.75)
-        } catch(e) { reject(e) }
+      img.onload = () => {
+        const MAX = 900
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+          else { width = Math.round(width * MAX / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        const result = canvas.toDataURL('image/jpeg', 0.70)
+        resolve(result)
       }
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')) }
       img.src = url
@@ -232,8 +208,7 @@ export default function Page() {
     const label = photoLabel || t('Page', 'Страница', 'Сторінка')
     setSaving(true)
     try {
-      const path = `passport_${selPass.id}_${Date.now()}.jpg`
-      const dataUrl = await compressAndUpload(file, path)
+      const dataUrl = await compressImage(file)
       const ph = await DB.addPassportPhoto(selPass.id, user.id, label, dataUrl)
       if (ph) {
         const updated = passports.map(p => p.id === selPass.id
@@ -244,12 +219,8 @@ export default function Page() {
       }
       setPhotoLabel('')
     } catch(e) {
-      console.error('Photo upload error:', e)
-      alert(t(
-        'Upload failed. Please try again.',
-        'Ошибка загрузки. Попробуйте ещё раз.',
-        'Помилка завантаження. Спробуйте ще раз.'
-      ))
+      console.error('Photo error:', e)
+      alert(t('Upload failed. Try again.', 'Ошибка загрузки.', 'Помилка завантаження.'))
     }
     setSaving(false)
   }
@@ -335,8 +306,7 @@ export default function Page() {
     const label = docPhotoLabel || t('Photo', 'Фото', 'Фото')
     setSaving(true)
     try {
-      const path = `doc_${selDoc.id}_${Date.now()}.jpg`
-      const dataUrl = await compressAndUpload(file, path)
+      const dataUrl = await compressImage(file)
       const ph = await DB.addDocPhoto(selDoc.id, user.id, label, dataUrl)
       if (ph) {
         const updated = { ...selDoc, document_photos: [...(selDoc.document_photos ?? []), ph] }
@@ -345,8 +315,8 @@ export default function Page() {
       }
       setDocPhotoLabel('')
     } catch(e) {
-      console.error('Photo upload error:', e)
-      alert(t('Upload failed. Please try again.', 'Ошибка загрузки. Попробуйте ещё раз.', 'Помилка завантаження. Спробуйте ще раз.'))
+      console.error('Photo error:', e)
+      alert(t('Upload failed. Try again.', 'Ошибка загрузки.', 'Помилка завантаження.'))
     }
     setSaving(false)
   }
