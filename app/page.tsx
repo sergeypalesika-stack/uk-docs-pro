@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
-import type { Address, DocPhoto, Resume } from '@/lib/db'
+import type { Address, DocPhoto, Resume, ResumeFile } from '@/lib/db'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -66,6 +66,9 @@ export default function Page() {
   }
   const [resumeForm, setResumeForm] = useState(EMPTY_RESUME)
   const [cvCopied, setCvCopied] = useState(false)
+  const resumeFileRef = useRef<HTMLInputElement>(null)
+  const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([])
+  const [fileUploading, setFileUploading] = useState(false)
   const [addrForm,  setAddrForm]  = useState({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
   const [filterCat, setFilterCat] = useState('all')
   const [search,    setSearch]    = useState('')
@@ -99,7 +102,7 @@ export default function Page() {
         DB.getPassports(user.id),
         DB.getTodos(user.id),
         DB.getAddresses(user.id),
-        DB.getResumes(user.id),
+        DB.getResumesWithFiles(user.id),
       ])
       setProfile(prof)
       setProfForm(prof ?? {})
@@ -107,7 +110,7 @@ export default function Page() {
       setPassports(passes as Passport[])
       setTodos(todos)
       setAddresses(addrs)
-      setResumes(res as Resume[])
+      setResumes(res as (Resume & { resume_files: ResumeFile[] })[])
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocsWithPhotos(user.id)
       setDocs(freshDocs as Doc[])
@@ -412,6 +415,59 @@ export default function Page() {
     setConfirmDel(null); setSelResume(null); setView('list')
   }
 
+  // ── RESUME FILE UPLOAD
+  const handleUploadResumeFile = async (file: File) => {
+    if (!user || !selResume) return
+    const MAX_MB = 5
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert(t(`File too large. Max ${MAX_MB}MB.`, `Файл занадто великий. Макс ${MAX_MB}МБ.`, `Файл занадто великий. Макс ${MAX_MB}МБ.`))
+      return
+    }
+    setFileUploading(true)
+    const reader = new FileReader()
+    reader.onload = async e => {
+      const base64 = (e.target?.result as string) ?? ''
+      const rf = await DB.addResumeFile(selResume.id, user.id, file.name, file.type, file.size, base64)
+      if (rf) {
+        const updated = { ...selResume, resume_files: [...(selResume as any).resume_files ?? [], rf] }
+        setSelResume(updated as any)
+        setResumes(prev => prev.map(r => r.id === selResume.id ? { ...r, resume_files: [...(r as any).resume_files ?? [], rf] } : r) as any)
+      }
+      setFileUploading(false)
+    }
+    reader.onerror = () => { setFileUploading(false) }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDeleteResumeFile = async (fileId: string) => {
+    if (!selResume) return
+    await DB.deleteResumeFile(fileId)
+    const updated = { ...selResume, resume_files: ((selResume as any).resume_files ?? []).filter((f: ResumeFile) => f.id !== fileId) }
+    setSelResume(updated as any)
+    setResumes(prev => prev.map(r => r.id === selResume.id ? updated : r) as any)
+  }
+
+  const downloadResumeFile = (file: ResumeFile) => {
+    const a = document.createElement('a')
+    a.href = file.data_base64
+    a.download = file.name
+    a.click()
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+  }
+
+  const fileIcon = (mime: string) => {
+    if (mime.includes('pdf')) return '📄'
+    if (mime.includes('word') || mime.includes('docx') || mime.includes('doc')) return '📝'
+    if (mime.includes('text')) return '📃'
+    if (mime.includes('image')) return '🖼️'
+    return '📎'
+  }
+
   const handleToggleResumePin = async (r: Resume) => {
     await DB.updateResume(r.id, { pinned: !r.pinned })
     setResumes(prev => prev.map(x => x.id === r.id ? { ...x, pinned: !x.pinned } : x))
@@ -604,6 +660,7 @@ export default function Page() {
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
 
       {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
+      <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
       <input ref={docPhotoRef}   type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docPhotoRef.current)docPhotoRef.current.value=''}} />
       <input ref={docCameraRef}  type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docCameraRef.current)docCameraRef.current.value=''}} />
       <input ref={passPhotoRef}  type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passPhotoRef.current)passPhotoRef.current.value=''}} />
@@ -1257,8 +1314,11 @@ export default function Page() {
                           </div>
                           {r.direction && <div style={{ fontSize: 12, color: C.blue, fontWeight: 600 }}>🎯 {r.direction}</div>}
                           {r.company && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>🏢 {r.company}</div>}
-                          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
-                            {t('Updated', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)}
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, display: 'flex', gap: 10 }}>
+                            <span>{t('Updated', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)}</span>
+                            {((r as any).resume_files?.length ?? 0) > 0 && (
+                              <span>📎 {(r as any).resume_files.length}</span>
+                            )}
                           </div>
                         </div>
                         <div style={{ color: '#cbd5e0', fontSize: 20 }}>›</div>
@@ -1359,6 +1419,49 @@ export default function Page() {
                   color: cvCopied ? '#166534' : C.textSub }}>
                   {cvCopied ? '✓ Copied!' : `⎘ ${t('Copy CV', 'Копіювати CV', 'Копіювати CV')}`}
                 </button>
+              </div>
+
+
+              {/* ── ATTACHED FILES ── */}
+              <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>📎 {t('Attached Files', 'Прикріплені файли', 'Прикріплені файли')} <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{((selResume as any).resume_files ?? []).length}</span></span>
+                </div>
+
+                {/* Files list */}
+                {((selResume as any).resume_files ?? []).length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    {((selResume as any).resume_files as ResumeFile[]).map((rf: ResumeFile) => (
+                      <div key={rf.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: C.bg, borderRadius: 12, marginBottom: 8 }}>
+                        <span style={{ fontSize: 28, flexShrink: 0 }}>{fileIcon(rf.mime_type)}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{rf.name}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{formatFileSize(rf.size_bytes)} · {formatDate(rf.added_at)}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => downloadResumeFile(rf)} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>
+                            ⬇️
+                          </button>
+                          <button onClick={() => handleDeleteResumeFile(rf.id)} style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', fontSize: 13, color: C.red }}>
+                            🗑
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {fileUploading ? (
+                  <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
+                ) : (
+                  <button onClick={() => resumeFileRef.current?.click()} style={{ width: '100%', background: C.navy, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    📎 {t('Attach File (PDF, Word, etc.)', 'Прикріпити файл (PDF, Word…)', 'Прикріпити файл (PDF, Word…)')}
+                  </button>
+                )}
+                <div style={{ fontSize: 11, color: C.muted, textAlign: 'center' as const, marginTop: 8 }}>
+                  {t('Max 5MB · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT')}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
