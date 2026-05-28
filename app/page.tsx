@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
-import type { Address } from '@/lib/db'
+import type { Address, DocPhoto } from '@/lib/db'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
 // ── TYPES
-interface Doc { id: string; category: string; title: string; title_ru: string; number: string; valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean }
+interface Doc { id: string; category: string; title: string; title_ru: string; number: string; valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean; document_photos?: DocPhoto[] }
+interface DocPhoto { id: string; document_id: string; label: string; data_url: string; added_at: string }
 interface PassportPhoto { id: string; label: string; data_url: string; added_at: string }
 interface Passport { id: string; type: string; number: string; issued_by: string; issued_date: string | null; expiry_date: string | null; notes: string; passport_photos: PassportPhoto[] }
 interface Profile { id: string; name: string; name_ru: string; dob: string; nationality: string; avatar: string }
@@ -69,6 +70,8 @@ export default function Page() {
   const [passForm,  setPassForm]  = useState({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
   const [photoLabel, setPhotoLabel] = useState('')
   const passPhotoRef = useRef<HTMLInputElement>(null)
+  const docPhotoRef  = useRef<HTMLInputElement>(null)
+  const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
 
   const t = useCallback((en: string, ru: string, uk?: string) => lang === 'ru' ? ru : lang === 'uk' ? (uk ?? ru) : en, [lang])
@@ -82,7 +85,7 @@ export default function Page() {
       setUser(user)
       const [prof, docs, passes, todos, addrs] = await Promise.all([
         DB.getProfile(user.id),
-        DB.getDocs(user.id),
+        DB.getDocsWithPhotos(user.id),
         DB.getPassports(user.id),
         DB.getTodos(user.id),
         DB.getAddresses(user.id),
@@ -268,6 +271,34 @@ export default function Page() {
     setView('list')
   }
 
+  // ── DOC PHOTO ACTIONS
+  const handleAddDocPhoto = async (file: File) => {
+    if (!user || !selDoc) return
+    const label = docPhotoLabel || t('Photo', 'Фото', 'Фото')
+    const reader = new FileReader()
+    reader.onload = async e => {
+      const dataUrl = e.target?.result as string
+      setSaving(true)
+      const ph = await DB.addDocPhoto(selDoc.id, user.id, label, dataUrl)
+      if (ph) {
+        const updated = { ...selDoc, document_photos: [...(selDoc.document_photos ?? []), ph] }
+        setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
+        setSelDoc(updated)
+      }
+      setDocPhotoLabel('')
+      setSaving(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDeleteDocPhoto = async (photoId: string) => {
+    if (!selDoc) return
+    await DB.deleteDocPhoto(photoId)
+    const updated = { ...selDoc, document_photos: (selDoc.document_photos ?? []).filter(p => p.id !== photoId) }
+    setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
+    setSelDoc(updated)
+  }
+
   const handleUpdateTodo = async () => {
     if (!selTodo) return
     const nt = todos.map(t => t.id === selTodo.id ? { ...t, text: todoForm.text, textRu: todoForm.textRu, category: todoForm.category, week: todoForm.week } : t)
@@ -434,6 +465,69 @@ export default function Page() {
               <button onClick={() => handleTogglePin(selDoc)} style={{ flex: 1, background: selDoc.pinned ? '#fef9c3' : C.surface, color: selDoc.pinned ? '#854d0e' : C.textSub, border: `1.5px solid ${selDoc.pinned ? '#fde047' : C.border}`, borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📌 {selDoc.pinned ? t('Unpin', 'Відкріпити', 'Відкріпити') : t('Pin', 'Закріпити', 'Закріпити')}</button>
               <button onClick={() => setConfirmDel(selDoc.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑</button>
             </div>
+
+            {/* ── DOCUMENT PHOTOS ── */}
+            <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                📸 {t('Document Photos', 'Фото документа', 'Фото документа')}
+                <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>
+                  {(selDoc.document_photos ?? []).length}
+                </span>
+              </div>
+
+              {/* Photo grid */}
+              {(selDoc.document_photos ?? []).length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                  {(selDoc.document_photos ?? []).map(ph => (
+                    <div key={ph.id} style={{ position: 'relative' }}>
+                      <img
+                        src={ph.data_url} alt={ph.label}
+                        onClick={() => setPhotoView(ph.data_url)}
+                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 10, cursor: 'pointer', border: `1px solid ${C.border}` }}
+                      />
+                      <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{ph.label}</div>
+                      <button
+                        onClick={() => handleDeleteDocPhoto(ph.id)}
+                        style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 99, width: 26, height: 26, color: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add photo */}
+              <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>
+                  {t('Add photo', 'Додати фото', 'Додати фото')}
+                </div>
+                <input
+                  value={docPhotoLabel}
+                  onChange={e => setDocPhotoLabel(e.target.value)}
+                  placeholder={t('Label (e.g. Front side)', 'Підпис (напр. Лицьова сторона)', 'Підпис (напр. Лицьова сторона)')}
+                  style={{ ...inputStyle, marginBottom: 10, fontSize: 13 }}
+                />
+                <input
+                  ref={docPhotoRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) handleAddDocPhoto(file)
+                    if (docPhotoRef.current) docPhotoRef.current.value = ''
+                  }}
+                />
+                <button
+                  onClick={() => docPhotoRef.current?.click()}
+                  disabled={saving}
+                  style={{ width: '100%', background: saving ? '#94a3b8' : C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {saving ? '⏳ Uploading…' : `📷 ${t('Take / Choose Photo', 'Сфотографувати / Вибрати', 'Сфотографувати / Вибрати')}`}
+                </button>
+              </div>
+            </div>
+
             {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
               <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this document?', 'Удалить этот документ?')}</div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -1107,6 +1201,9 @@ function DocCard({ doc, cat, lang, onOpen }: { doc: Doc; cat: { icon: string; co
         </div>
         {doc.number && <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#4a5568', fontWeight: 600, letterSpacing: '0.04em' }}>{doc.number}</div>}
         {doc.valid_until && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{lang !== 'en' ? 'до' : 'until'} {formatDate(doc.valid_until)}</div>}
+        {(doc.document_photos?.length ?? 0) > 0 && (
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>📸 {doc.document_photos!.length} {lang !== 'en' ? 'фото' : 'photo(s)'}</div>
+        )}
       </div>
       <div style={{ color: '#cbd5e0', fontSize: 20 }}>›</div>
     </div>
