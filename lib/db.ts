@@ -236,3 +236,48 @@ export async function addPassportPhotoUrl(passportId: string, userId: string, la
     .select().single()
   return data
 }
+
+// ── RESUMES ──────────────────────────────────────────
+export interface Resume {
+  id: string
+  user_id: string
+  title: string
+  direction: string
+  company: string
+  status: 'draft' | 'ready' | 'sent' | 'interview' | 'rejected'
+  summary: string
+  skills: string
+  experience: string
+  education: string
+  notes: string
+  color: string
+  pinned: boolean
+  created_at: string
+  updated_at: string
+}
+
+export async function getResumes(userId: string) {
+  const { data } = await sb()
+    .from('resumes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('pinned', { ascending: false })
+    .order('updated_at', { ascending: false })
+  return (data ?? []) as Resume[]
+}
+
+export async function addResume(userId: string, r: Omit<Resume, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+  const { data } = await sb()
+    .from('resumes')
+    .insert({ user_id: userId, ...r, updated_at: new Date().toISOString() })
+    .select().single()
+  return data as Resume | null
+}
+
+export async function updateResume(id: string, fields: Partial<Omit<Resume, 'id' | 'user_id'>>) {
+  return sb().from('resumes').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
+}
+
+export async function deleteResume(id: string) {
+  return sb().from('resumes').delete().eq('id', id)
+}
