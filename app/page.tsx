@@ -68,9 +68,10 @@ export default function Page() {
   const [docForm,   setDocForm]   = useState({ category: 'immigration', title: '', title_ru: '', number: '', valid_from: '', valid_until: '', notes: '', notes_ru: '', pinned: false })
   const [passForm,  setPassForm]  = useState({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
   const [photoLabel, setPhotoLabel] = useState('')
-  const passPhotoRef = useRef<HTMLInputElement>(null)
-  const docPhotoRef  = useRef<HTMLInputElement>(null)
-  const docCameraRef = useRef<HTMLInputElement>(null)
+  const passPhotoRef   = useRef<HTMLInputElement>(null)
+  const passCameraRef  = useRef<HTMLInputElement>(null)
+  const docPhotoRef    = useRef<HTMLInputElement>(null)
+  const docCameraRef   = useRef<HTMLInputElement>(null)
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
 
@@ -178,24 +179,50 @@ export default function Page() {
     setConfirmDel(null); setSelPass(null); setView('list')
   }
 
-  // ── IMAGE COMPRESSION ── max 800px, quality 0.7 → ~100-200KB
-  const compressImage = (file: File): Promise<string> => {
+  // ── IMAGE COMPRESSION + STORAGE UPLOAD
+  const compressAndUpload = async (
+    file: File,
+    storagePath: string
+  ): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
       const url = URL.createObjectURL(file)
-      img.onload = () => {
-        const MAX = 800
-        let { width, height } = img
-        if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX }
-        else if (height > MAX) { width = Math.round(width * MAX / height); height = MAX }
-        const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, width, height)
-        URL.revokeObjectURL(url)
-        resolve(canvas.toDataURL('image/jpeg', 0.72))
+      img.onload = async () => {
+        try {
+          // Resize to max 1000px
+          const MAX = 1000
+          let { width, height } = img
+          if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+          else if (height > MAX) { width = Math.round(width * MAX / height); height = MAX }
+
+          const canvas = document.createElement('canvas')
+          canvas.width = width; canvas.height = height
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+          URL.revokeObjectURL(url)
+
+          // Convert to blob
+          canvas.toBlob(async (blob) => {
+            if (!blob) { reject(new Error('Canvas to blob failed')); return }
+
+            // Try Supabase Storage first
+            const storageUrl = await DB.uploadPhotoToStorage(user!.id, blob, storagePath)
+            if (storageUrl) {
+              resolve(storageUrl)
+              return
+            }
+
+            // Fallback: use smaller base64 (max 600px, quality 0.6)
+            const canvas2 = document.createElement('canvas')
+            const MAX2 = 600
+            let w2 = width, h2 = height
+            if (w2 > MAX2) { h2 = Math.round(h2 * MAX2 / w2); w2 = MAX2 }
+            canvas2.width = w2; canvas2.height = h2
+            canvas2.getContext('2d')!.drawImage(img, 0, 0, w2, h2)
+            resolve(canvas2.toDataURL('image/jpeg', 0.6))
+          }, 'image/jpeg', 0.75)
+        } catch(e) { reject(e) }
       }
-      img.onerror = reject
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')) }
       img.src = url
     })
   }
@@ -205,17 +232,24 @@ export default function Page() {
     const label = photoLabel || t('Page', 'Страница', 'Сторінка')
     setSaving(true)
     try {
-      const dataUrl = await compressImage(file)
+      const path = `passport_${selPass.id}_${Date.now()}.jpg`
+      const dataUrl = await compressAndUpload(file, path)
       const ph = await DB.addPassportPhoto(selPass.id, user.id, label, dataUrl)
       if (ph) {
-        const updated = passports.map(p => p.id === selPass.id ? { ...p, passport_photos: [...p.passport_photos, ph as PassportPhoto] } : p)
+        const updated = passports.map(p => p.id === selPass.id
+          ? { ...p, passport_photos: [...p.passport_photos, ph as PassportPhoto] }
+          : p)
         setPassports(updated)
         setSelPass(updated.find(p => p.id === selPass.id) ?? null)
       }
       setPhotoLabel('')
     } catch(e) {
       console.error('Photo upload error:', e)
-      alert(t('Upload failed. Try a smaller image.', 'Ошибка загрузки. Попробуй меньшее фото.', 'Помилка завантаження. Спробуй менше фото.'))
+      alert(t(
+        'Upload failed. Please try again.',
+        'Ошибка загрузки. Попробуйте ещё раз.',
+        'Помилка завантаження. Спробуйте ще раз.'
+      ))
     }
     setSaving(false)
   }
@@ -301,7 +335,8 @@ export default function Page() {
     const label = docPhotoLabel || t('Photo', 'Фото', 'Фото')
     setSaving(true)
     try {
-      const dataUrl = await compressImage(file)
+      const path = `doc_${selDoc.id}_${Date.now()}.jpg`
+      const dataUrl = await compressAndUpload(file, path)
       const ph = await DB.addDocPhoto(selDoc.id, user.id, label, dataUrl)
       if (ph) {
         const updated = { ...selDoc, document_photos: [...(selDoc.document_photos ?? []), ph] }
@@ -311,7 +346,7 @@ export default function Page() {
       setDocPhotoLabel('')
     } catch(e) {
       console.error('Photo upload error:', e)
-      alert(t('Upload failed. Try a smaller image.', 'Ошибка загрузки. Попробуй меньшее фото.', 'Помилка завантаження. Спробуй менше фото.'))
+      alert(t('Upload failed. Please try again.', 'Ошибка загрузки. Попробуйте ещё раз.', 'Помилка завантаження. Спробуйте ще раз.'))
     }
     setSaving(false)
   }
@@ -743,13 +778,13 @@ export default function Page() {
                 {/* Gallery */}
                 <input ref={passPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); if (passPhotoRef.current) passPhotoRef.current.value = '' }} />
                 {/* Camera */}
-                <input ref={passPhotoRef} type="file" accept="image/*" capture="environment" id="pass-camera-input" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); const el = document.getElementById('pass-camera-input') as HTMLInputElement; if(el) el.value = '' }} />
+                <input ref={passCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleAddPhoto(f); if (passCameraRef.current) passCameraRef.current.value = '' }} />
 
                 {saving ? (
                   <div style={{ textAlign: 'center', padding: '12px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <button onClick={() => (document.getElementById('pass-camera-input') as HTMLInputElement)?.click()} style={{ background: '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => passCameraRef.current?.click()} style={{ background: '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>📷</span>
                       <span>{t('Camera', 'Камера', 'Камера')}</span>
                     </button>
