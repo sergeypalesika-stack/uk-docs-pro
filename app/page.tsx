@@ -437,7 +437,7 @@ export default function Page() {
     { id: 'draft',     en: 'Draft',     ru: 'Чернетка',   uk: 'Чернетка',  color: '#546e7a', bg: '#f1f5fb' },
     { id: 'ready',     en: 'Ready',     ru: 'Готово',      uk: 'Готово',    color: '#2e7d32', bg: '#f0fdf4' },
     { id: 'sent',      en: 'Sent',      ru: 'Відправлено', uk: 'Відправлено', color: '#1d4ed8', bg: '#eff6ff' },
-    { id: 'interview', en: 'Interview', ru: 'Інтерв'ю',   uk: 'Інтерв'ю', color: '#b45309', bg: '#fff7ed' },
+    { id: 'interview', en: 'Interview', ru: 'Інтервʼю',  uk: 'Інтервʼю', color: '#b45309', bg: '#fff7ed' },
     { id: 'rejected',  en: 'Rejected',  ru: 'Відмова',     uk: 'Відмова',   color: '#c62828', bg: '#fee2e2' },
   ]
   const resumeStatus = (id: string) => RESUME_STATUSES.find(s => s.id === id) ?? RESUME_STATUSES[0]
@@ -1423,7 +1423,7 @@ export default function Page() {
               </FField>
               <FField label={t('Company', 'Компанія', 'Компанія')}>
                 <input value={resumeForm.company} onChange={e => setResumeForm(f=>({...f,company:e.target.value}))}
-                  placeholder={t('Optional', 'Необов'язково', 'Необов'язково')} style={inputStyle} />
+                  placeholder={t('Optional', "Необов'язково", "Необов'язково")} style={inputStyle} />
               </FField>
             </div>
 
