@@ -10,7 +10,6 @@ import type { User } from '@supabase/supabase-js'
 
 // ── TYPES
 interface Doc { id: string; category: string; title: string; title_ru: string; number: string; valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean; document_photos?: DocPhoto[] }
-interface DocPhoto { id: string; document_id: string; label: string; data_url: string; added_at: string }
 interface PassportPhoto { id: string; label: string; data_url: string; added_at: string }
 interface Passport { id: string; type: string; number: string; issued_by: string; issued_date: string | null; expiry_date: string | null; notes: string; passport_photos: PassportPhoto[] }
 interface Profile { id: string; name: string; name_ru: string; dob: string; nationality: string; avatar: string }
