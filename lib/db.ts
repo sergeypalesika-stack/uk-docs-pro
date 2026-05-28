@@ -281,3 +281,46 @@ export async function updateResume(id: string, fields: Partial<Omit<Resume, 'id'
 export async function deleteResume(id: string) {
   return sb().from('resumes').delete().eq('id', id)
 }
+
+// ── RESUME FILES ──────────────────────────────────────
+export interface ResumeFile {
+  id: string
+  resume_id: string
+  user_id: string
+  name: string
+  mime_type: string
+  size_bytes: number
+  data_base64: string
+  added_at: string
+}
+
+export async function getResumeFiles(resumeId: string) {
+  const { data } = await sb()
+    .from('resume_files')
+    .select('*')
+    .eq('resume_id', resumeId)
+    .order('added_at', { ascending: false })
+  return (data ?? []) as ResumeFile[]
+}
+
+export async function addResumeFile(resumeId: string, userId: string, name: string, mimeType: string, sizeBytes: number, dataBase64: string) {
+  const { data } = await sb()
+    .from('resume_files')
+    .insert({ resume_id: resumeId, user_id: userId, name, mime_type: mimeType, size_bytes: sizeBytes, data_base64: dataBase64 })
+    .select().single()
+  return data as ResumeFile | null
+}
+
+export async function deleteResumeFile(id: string) {
+  return sb().from('resume_files').delete().eq('id', id)
+}
+
+export async function getResumesWithFiles(userId: string) {
+  const { data } = await sb()
+    .from('resumes')
+    .select('*, resume_files(*)')
+    .eq('user_id', userId)
+    .order('pinned', { ascending: false })
+    .order('updated_at', { ascending: false })
+  return (data ?? []) as (Resume & { resume_files: ResumeFile[] })[]
+}
