@@ -177,13 +177,35 @@ export default function Page() {
     setPassports(prev => prev.filter(p => p.id !== id))
     setConfirmDel(null); setSelPass(null); setView('list')
   }
+
+  // ── IMAGE COMPRESSION ── max 800px, quality 0.7 → ~100-200KB
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        const MAX = 800
+        let { width, height } = img
+        if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+        else if (height > MAX) { width = Math.round(width * MAX / height); height = MAX }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        resolve(canvas.toDataURL('image/jpeg', 0.72))
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
+
   const handleAddPhoto = async (file: File) => {
     if (!user || !selPass) return
-    const label = photoLabel || t('Page', 'Страница')
-    const reader = new FileReader()
-    reader.onload = async e => {
-      const dataUrl = e.target?.result as string
-      setSaving(true)
+    const label = photoLabel || t('Page', 'Страница', 'Сторінка')
+    setSaving(true)
+    try {
+      const dataUrl = await compressImage(file)
       const ph = await DB.addPassportPhoto(selPass.id, user.id, label, dataUrl)
       if (ph) {
         const updated = passports.map(p => p.id === selPass.id ? { ...p, passport_photos: [...p.passport_photos, ph as PassportPhoto] } : p)
@@ -191,9 +213,11 @@ export default function Page() {
         setSelPass(updated.find(p => p.id === selPass.id) ?? null)
       }
       setPhotoLabel('')
-      setSaving(false)
+    } catch(e) {
+      console.error('Photo upload error:', e)
+      alert(t('Upload failed. Try a smaller image.', 'Ошибка загрузки. Попробуй меньшее фото.', 'Помилка завантаження. Спробуй менше фото.'))
     }
-    reader.readAsDataURL(file)
+    setSaving(false)
   }
   const handleDeletePhoto = async (passportId: string, photoId: string) => {
     await DB.deletePassportPhoto(photoId)
@@ -275,10 +299,9 @@ export default function Page() {
   const handleAddDocPhoto = async (file: File) => {
     if (!user || !selDoc) return
     const label = docPhotoLabel || t('Photo', 'Фото', 'Фото')
-    const reader = new FileReader()
-    reader.onload = async e => {
-      const dataUrl = e.target?.result as string
-      setSaving(true)
+    setSaving(true)
+    try {
+      const dataUrl = await compressImage(file)
       const ph = await DB.addDocPhoto(selDoc.id, user.id, label, dataUrl)
       if (ph) {
         const updated = { ...selDoc, document_photos: [...(selDoc.document_photos ?? []), ph] }
@@ -286,9 +309,11 @@ export default function Page() {
         setSelDoc(updated)
       }
       setDocPhotoLabel('')
-      setSaving(false)
+    } catch(e) {
+      console.error('Photo upload error:', e)
+      alert(t('Upload failed. Try a smaller image.', 'Ошибка загрузки. Попробуй меньшее фото.', 'Помилка завантаження. Спробуй менше фото.'))
     }
-    reader.readAsDataURL(file)
+    setSaving(false)
   }
 
   const handleDeleteDocPhoto = async (photoId: string) => {
