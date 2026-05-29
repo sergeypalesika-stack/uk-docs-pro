@@ -16,7 +16,8 @@ interface Profile { id: string; name: string; name_ru: string; dob: string; nati
 interface TodoItem { id: string; text: string; textRu: string; done: boolean; week: number; category: string }
 
 type Lang    = 'en' | 'ru' | 'uk'
-type MainTab = 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'profile'
+type Theme   = 'light' | 'dark'
+type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'medical' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
@@ -66,6 +67,18 @@ export default function Page() {
   }
   const [resumeForm, setResumeForm] = useState(EMPTY_RESUME)
   const [cvCopied, setCvCopied] = useState(false)
+  const [theme, setTheme] = useState<Theme>('light')
+  const [pinLocked, setPinLocked] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState(false)
+  const [globalSearch, setGlobalSearch] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [medical, setMedical] = useState<DB.MedicalRecord[]>([])
+  const [contacts, setContacts] = useState<DB.Contact[]>([])
+  const [medForm, setMedForm] = useState({ type: 'gp', title: '', value: '', notes: '', valid_until: '' })
+  const [contactForm, setContactForm] = useState({ name: '', relation: '', phone: '', notes: '', is_primary: false })
+  const [selMed, setSelMed] = useState<DB.MedicalRecord | null>(null)
+  const [selContact, setSelContact] = useState<DB.Contact | null>(null)
   const resumeFileRef = useRef<HTMLInputElement>(null)
   const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([])
   const [fileUploading, setFileUploading] = useState(false)
@@ -88,6 +101,75 @@ export default function Page() {
   const supabase = createClient()
 
   const t = useCallback((en: string, ru: string, uk?: string) => lang === 'ru' ? ru : lang === 'uk' ? (uk ?? ru) : en, [lang])
+
+  // Dark mode
+  const dark = theme === 'dark'
+  const D = dark ? {
+    navy: '#e2e8f0', navyM: '#cbd5e1', blue: '#60a5fa', accent: '#3b82f6',
+    surface: '#1e293b', bg: '#0f172a', border: '#334155',
+    muted: '#64748b', text: '#f1f5f9', textSub: '#94a3b8',
+    red: '#f87171', green: '#4ade80',
+  } : {
+    navy: C.navy, navyM: C.navyM, blue: C.blue, accent: C.accent,
+    surface: C.surface, bg: C.bg, border: C.border,
+    muted: C.muted, text: C.text, textSub: C.textSub,
+    red: C.red, green: C.green,
+  }
+
+  const toggleTheme = () => {
+    const nt = theme === 'light' ? 'dark' : 'light'
+    setTheme(nt); localStorage.setItem('uk_theme', nt)
+  }
+
+  // PIN functions
+  const PIN_KEY = 'uk_pin'
+  const checkPin = (input: string) => {
+    const stored = localStorage.getItem(PIN_KEY)
+    if (input === stored) { setPinLocked(false); setPinInput(''); setPinError(false) }
+    else { setPinError(true); setTimeout(() => { setPinError(false); setPinInput('') }, 1000) }
+  }
+  const setPin = (pin: string) => { localStorage.setItem(PIN_KEY, pin) }
+  const removePin = () => { localStorage.removeItem(PIN_KEY) }
+
+  // Medical handlers
+  const handleAddMedical = async () => {
+    if (!user || !medForm.title) return
+    setSaving(true)
+    const nm = await DB.addMedical(user.id, { ...medForm, valid_until: medForm.valid_until || null })
+    if (nm) setMedical(prev => [...prev, nm])
+    setMedForm({ type: 'gp', title: '', value: '', notes: '', valid_until: '' })
+    setSaving(false)
+  }
+  const handleDeleteMedical = async (id: string) => {
+    await DB.deleteMedical(id)
+    setMedical(prev => prev.filter(m => m.id !== id))
+    setSelMed(null)
+  }
+
+  // Contact handlers
+  const handleAddContact = async () => {
+    if (!user || !contactForm.name || !contactForm.phone) return
+    setSaving(true)
+    const nc = await DB.addContact(user.id, contactForm)
+    if (nc) setContacts(prev => [...prev, nc])
+    setContactForm({ name: '', relation: '', phone: '', notes: '', is_primary: false })
+    setSaving(false)
+  }
+  const handleDeleteContact = async (id: string) => {
+    await DB.deleteContact(id)
+    setContacts(prev => prev.filter(c => c.id !== id))
+    setSelContact(null)
+  }
+
+  // Global search results
+  const gq = globalSearch.toLowerCase().trim()
+  const searchResults = gq.length > 1 ? [
+    ...docs.filter(d => d.title.toLowerCase().includes(gq) || (d.title_ru ?? '').toLowerCase().includes(gq) || (d.number ?? '').toLowerCase().includes(gq)).map(d => ({ type: 'doc', icon: '📄', title: d.title, sub: d.number ?? '', id: d.id, action: () => { setTab('docs'); setSelDoc(d); setView('detail'); setShowSearch(false); setGlobalSearch('') } })),
+    ...passports.filter(p => p.type.toLowerCase().includes(gq) || p.number.toLowerCase().includes(gq)).map(p => ({ type: 'pass', icon: '📘', title: p.type, sub: p.number, id: p.id, action: () => { setTab('passport'); setSelPass(p); setView('passportDetail'); setShowSearch(false); setGlobalSearch('') } })),
+    ...addresses.filter(a => a.label.toLowerCase().includes(gq) || a.city.toLowerCase().includes(gq)).map(a => ({ type: 'addr', icon: '📍', title: a.label, sub: [a.city, a.postcode].filter(Boolean).join(', '), id: a.id, action: () => { setTab('address'); setSelAddr(a); setView('detail'); setShowSearch(false); setGlobalSearch('') } })),
+    ...resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).map(r => ({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r as any); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } })),
+    ...todos.filter(t => t.text.toLowerCase().includes(gq) || t.textRu.toLowerCase().includes(gq)).map(t => ({ type: 'todo', icon: t.done ? '✅' : '⬜', title: t.text, sub: '', id: t.id, action: () => { setTab('todo'); setShowSearch(false); setGlobalSearch('') } })),
+  ] : []
   const cat = (id: string) => CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]
 
   // ── LOAD
@@ -96,13 +178,15 @@ export default function Page() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUser(user)
-      const [prof, docs, passes, todos, addrs, res] = await Promise.all([
+      const [prof, docs, passes, todos, addrs, res, med, ctcts] = await Promise.all([
         DB.getProfile(user.id),
         DB.getDocsWithPhotos(user.id),
         DB.getPassports(user.id),
         DB.getTodos(user.id),
         DB.getAddresses(user.id),
         DB.getResumesWithFiles(user.id),
+        DB.getMedical(user.id),
+        DB.getContacts(user.id),
       ])
       setProfile(prof)
       setProfForm(prof ?? {})
@@ -111,11 +195,17 @@ export default function Page() {
       setTodos(todos)
       setAddresses(addrs)
       setResumes(res as (Resume & { resume_files: ResumeFile[] })[])
+      setMedical(med)
+      setContacts(ctcts)
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocsWithPhotos(user.id)
       setDocs(freshDocs as Doc[])
       const saved = localStorage.getItem('uk_lang') as Lang
       if (saved) setLang(saved)
+      const th = localStorage.getItem('uk_theme') as Theme
+      if (th) setTheme(th)
+      const pin = localStorage.getItem('uk_pin')
+      if (pin) setPinLocked(true)
       setLoading(false)
     }
     load()
@@ -649,6 +739,41 @@ export default function Page() {
     </div>
   )
 
+  // ── PIN SCREEN
+  if (pinLocked) return (
+    <div style={{ minHeight: '100vh', background: dark ? '#0f172a' : C.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>UK Docs</div>
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 32 }}>{t('Enter PIN to continue', 'Введіть PIN для входу', 'Введіть PIN для входу')}</div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: pinInput.length > i ? (pinError ? '#ef4444' : '#fff') : 'rgba(255,255,255,0.2)', transition: 'all 0.2s' }} />
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, width: '100%', maxWidth: 260 }}>
+        {[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map((k, i) => (
+          <button key={i} onClick={() => {
+            if (k === '⌫') setPinInput(p => p.slice(0,-1))
+            else if (k === '') return
+            else {
+              const np = pinInput + k
+              setPinInput(np)
+              if (np.length === 4) checkPin(np)
+            }
+          }} style={{
+            background: k === '' ? 'transparent' : 'rgba(255,255,255,0.1)',
+            border: k === '' ? 'none' : '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 16, padding: '20px 0', fontSize: k === '⌫' ? 20 : 24,
+            fontWeight: 600, color: '#fff', cursor: k === '' ? 'default' : 'pointer',
+          }}>{k}</button>
+        ))}
+      </div>
+      <button onClick={() => { removePin(); setPinLocked(false) }} style={{ marginTop: 24, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 13 }}>
+        {t('Forgot PIN? Remove lock', 'Забули PIN? Зняти блокування', 'Забули PIN? Зняти блокування')}
+      </button>
+    </div>
+  )
+
   if (photoView) return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPhotoView(null)}>
       <img src={photoView} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
@@ -657,7 +782,7 @@ export default function Page() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
+    <div style={{ minHeight: '100vh', background: D.bg, color: D.text }}>
 
       {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
       <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
@@ -667,7 +792,7 @@ export default function Page() {
       <input ref={passCameraRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passCameraRef.current)passCameraRef.current.value=''}} />
 
       {/* ══ HEADER ══ */}
-      <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 20px rgba(0,0,0,0.25)' }}>
+      <div style={{ background: dark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 20px rgba(0,0,0,0.25)' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 16px' }}>
 
           {/* Top bar */}
@@ -709,6 +834,153 @@ export default function Page() {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '16px 16px 120px' }}>
 
         {/* ══════════ DOCS TAB ══════════ */}
+
+        {/* ══ GLOBAL SEARCH OVERLAY ══ */}
+        {showSearch && (
+          <div style={{ position: 'fixed', inset: 0, background: dark ? 'rgba(0,0,0,0.9)' : 'rgba(15,31,61,0.8)', zIndex: 300, padding: '60px 16px 20px' }}
+            onClick={() => setShowSearch(false)}>
+            <div onClick={e => e.stopPropagation()}>
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18 }}>🔍</span>
+                <input
+                  autoFocus
+                  value={globalSearch}
+                  onChange={e => setGlobalSearch(e.target.value)}
+                  placeholder={t('Search everything…', 'Пошук по всьому…', 'Пошук по всьому…')}
+                  style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: 14, border: 'none', fontSize: 16, background: dark ? '#1e293b' : '#fff', color: D.text, outline: 'none', boxSizing: 'border-box' as const }}
+                />
+                {globalSearch && <button onClick={() => setGlobalSearch('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: D.muted, fontSize: 20 }}>×</button>}
+              </div>
+
+              {searchResults.length > 0 && (
+                <div style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, overflow: 'hidden' }}>
+                  {searchResults.slice(0, 8).map((r, i) => (
+                    <div key={r.id + i} onClick={r.action} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: i < Math.min(searchResults.length, 8) - 1 ? `1px solid ${D.border}` : 'none', cursor: 'pointer' }}>
+                      <span style={{ fontSize: 22 }}>{r.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: D.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.title}</div>
+                        {r.sub && <div style={{ fontSize: 12, color: D.muted, fontFamily: r.type === 'doc' ? 'monospace' : 'inherit' }}>{r.sub}</div>}
+                      </div>
+                      <span style={{ fontSize: 16, color: D.muted }}>›</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {globalSearch.length > 1 && searchResults.length === 0 && (
+                <div style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, padding: '20px', textAlign: 'center' as const, color: D.muted, fontSize: 14 }}>
+                  {t('Nothing found', 'Нічого не знайдено', 'Нічого не знайдено')}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════ HOME DASHBOARD ══════════════ */}
+        {tab === 'home' && (
+          <>
+            {/* Welcome */}
+            <div style={{ background: dark ? 'linear-gradient(135deg,#1e3a5f,#0f2040)' : `linear-gradient(135deg,${C.navy},${C.navyM})`, borderRadius: 20, padding: '20px 22px', marginBottom: 14, color: '#fff' }}>
+              <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>
+                {new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 2 }}>
+                {t('Hello', 'Привіт', 'Привіт')}, {profile?.name?.split(' ')[0] || 'there'} 👋
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.6 }}>
+                {docs.length} {t('documents', 'документів', 'документів')} · {resumes.length} CV · {todos.filter(t=>t.done).length}/{todos.length} {t('tasks', 'завдань', 'завдань')}
+              </div>
+            </div>
+
+            {/* Expiry alerts */}
+            {(() => {
+              const urgent = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x >= 0 && x <= 30 })
+              const expiring = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x > 30 && x <= 90 })
+              return urgent.length > 0 || expiring.length > 0 ? (
+                <div style={{ background: dark ? '#3b1515' : '#fff7ed', border: `1px solid ${dark ? '#7f1d1d' : '#fed7aa'}`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: dark ? '#fca5a5' : '#c2410c', marginBottom: 8 }}>⚠️ {t('Action required', 'Потрібна увага', 'Потрібна увага')}</div>
+                  {urgent.map(d => (
+                    <div key={d.id} onClick={() => { setTab('docs'); setSelDoc(d); setView('detail') }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: dark ? '#fca5a5' : '#7c2d12', marginBottom: 4, cursor: 'pointer', padding: '4px 0' }}>
+                      <span>🔴 {d.title_ru && lang !== 'en' ? d.title_ru : d.title}</span>
+                      <span style={{ fontWeight: 700 }}>{daysUntil(d.valid_until ?? '')}d</span>
+                    </div>
+                  ))}
+                  {expiring.map(d => (
+                    <div key={d.id} onClick={() => { setTab('docs'); setSelDoc(d); setView('detail') }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: dark ? '#fcd34d' : '#92400e', marginBottom: 4, cursor: 'pointer', padding: '4px 0' }}>
+                      <span>🟡 {d.title_ru && lang !== 'en' ? d.title_ru : d.title}</span>
+                      <span>{daysUntil(d.valid_until ?? '')}d</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null
+            })()}
+
+            {/* Quick stats grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              {[
+                { icon: '📂', label: t('Documents','Документи','Документи'), val: docs.length, color: C.navy, tab: 'docs' as MainTab },
+                { icon: '📘', label: t('Passports','Паспорти','Паспорти'), val: passports.length, color: '#0369a1', tab: 'passport' as MainTab },
+                { icon: '📍', label: t('Addresses','Адреси','Адреси'), val: addresses.length, color: '#2e7d32', tab: 'address' as MainTab },
+                { icon: '📝', label: 'CV', val: resumes.length, color: '#1a4480', tab: 'resume' as MainTab },
+              ].map((s, i) => (
+                <div key={i} onClick={() => switchTab(s.tab)} style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 14px', cursor: 'pointer', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', borderLeft: `4px solid ${s.color}` }}>
+                  <div style={{ fontSize: 26, marginBottom: 6 }}>{s.icon}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.val}</div>
+                  <div style={{ fontSize: 12, color: D.muted }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Next tasks */}
+            {todos.filter(t => !t.done).length > 0 && (
+              <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: D.navy }}>✅ {t('Next Tasks', 'Наступні завдання', 'Наступні завдання')}</span>
+                  <button onClick={() => switchTab('todo')} style={{ background: 'none', border: 'none', color: D.blue, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t('All','Всі','Всі')} →</button>
+                </div>
+                <div style={{ background: D.bg, borderRadius: 10, height: 6, marginBottom: 12, overflow: 'hidden' }}>
+                  <div style={{ background: `linear-gradient(90deg,${C.accent},#22c55e)`, height: '100%', width: `${todos.length ? todoDone/todos.length*100 : 0}%`, borderRadius: 99 }} />
+                </div>
+                {todos.filter(t => !t.done).slice(0, 3).map(item => (
+                  <div key={item.id} onClick={() => handleToggleTodo(item)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${D.border}`, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: D.text }}>{lang !== 'en' ? item.textRu || item.text : item.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Emergency contacts quick access */}
+            {contacts.length > 0 && (
+              <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: D.navy, marginBottom: 12 }}>🆘 {t('Emergency Contacts', 'Екстрені контакти', 'Екстрені контакти')}</div>
+                {contacts.slice(0, 3).map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: `1px solid ${D.border}` }}>
+                    <span style={{ fontSize: 20 }}>{c.is_primary ? '⭐' : '👤'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: D.text }}>{c.name}</div>
+                      <div style={{ fontSize: 11, color: D.muted }}>{c.relation}</div>
+                    </div>
+                    <a href={`tel:${c.phone}`} style={{ background: '#dcfce7', border: 'none', borderRadius: 10, padding: '8px 12px', color: '#166534', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>📞</a>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* QR Share Code */}
+            {(() => {
+              const sc = docs.find(d => d.number && d.title.toLowerCase().includes('share code') && d.title.toLowerCase().includes('work'))
+              if (!sc) return null
+              return (
+                <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: D.navy, marginBottom: 8 }}>📱 {t('Right to Work', 'Право на роботу', 'Право на роботу')}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 800, letterSpacing: '0.1em', color: C.blue, marginBottom: 10 }}>{sc.number}</div>
+                  <CopyBtn value={sc.number} lang={lang} />
+                </div>
+              )
+            })()}
+          </>
+        )}
+
         {tab === 'docs' && view === 'list' && (
           <>
             {expiring60.length > 0 && (
@@ -731,8 +1003,8 @@ export default function Page() {
               ))}
             </div>
 
-            {pinned.length > 0 && (<><SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')}</SLabel>{pinned.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} onOpen={() => { setSelDoc(d); setView('detail') }} />)}<div style={{ height: 8 }} /></>)}
-            {rest.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} onOpen={() => { setSelDoc(d); setView('detail') }} />)}
+            {pinned.length > 0 && (<><SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')}</SLabel>{pinned.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)}<div style={{ height: 8 }} /></>)}
+            {rest.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)}
 
             {filteredDocs.length === 0 && (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
@@ -1760,6 +2032,101 @@ export default function Page() {
         )}
 
         {/* ══════════ PROFILE TAB ══════════ */}
+
+        {/* ══════════════ MEDICAL / HEALTH TAB ══════════════ */}
+        {tab === 'medical' && (
+          <>
+            {/* Emergency contacts */}
+            <SLabel>🆘 {t('Emergency Contacts', 'Екстрені контакти', 'Екстрені контакти')}</SLabel>
+
+            {contacts.length === 0 ? (
+              <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 12, padding: '16px 18px', marginBottom: 14, textAlign: 'center' as const, color: D.muted, fontSize: 13 }}>
+                {t('No contacts added yet', 'Контактів ще немає', 'Контактів ще немає')}
+              </div>
+            ) : (
+              contacts.map(c => (
+                <div key={c.id} style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 12, marginBottom: 8, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: `4px solid ${c.is_primary ? '#c62828' : '#546e7a'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 26 }}>{c.is_primary ? '⭐' : '👤'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: D.navy }}>{c.name}</div>
+                      <div style={{ fontSize: 12, color: D.muted }}>{c.relation}</div>
+                      <div style={{ fontSize: 13, fontFamily: 'monospace', color: D.blue, fontWeight: 600 }}>{c.phone}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <a href={`tel:${c.phone}`} style={{ background: '#dcfce7', border: 'none', borderRadius: 10, padding: '10px 14px', color: '#166534', fontSize: 18, textDecoration: 'none', display: 'flex', alignItems: 'center' }}>📞</a>
+                      <a href={`https://wa.me/${c.phone.replace(/[^0-9]/g,'')}`} target="_blank" rel="noreferrer" style={{ background: '#dcfce7', border: 'none', borderRadius: 10, padding: '10px 14px', color: '#166534', fontSize: 18, textDecoration: 'none', display: 'flex', alignItems: 'center' }}>💬</a>
+                      <button onClick={() => handleDeleteContact(c.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', color: D.red, fontSize: 15 }}>🗑</button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {/* Add contact form */}
+            <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>+ {t('Add Contact', 'Додати контакт', 'Додати контакт')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div><input value={contactForm.name} onChange={e=>setContactForm(f=>({...f,name:e.target.value}))} placeholder={t('Name','Ім'я','Ім'я')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
+                <div><input value={contactForm.relation} onChange={e=>setContactForm(f=>({...f,relation:e.target.value}))} placeholder={t('Relation','Хто це','Хто це')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
+              </div>
+              <input value={contactForm.phone} onChange={e=>setContactForm(f=>({...f,phone:e.target.value}))} placeholder="+44 7700 900000" type="tel" style={{...inputStyle, marginBottom: 10, fontFamily: 'monospace', fontSize: 16, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer' }} onClick={() => setContactForm(f=>({...f,is_primary:!f.is_primary}))}>
+                <div style={{ width: 20, height: 20, borderRadius: 5, background: contactForm.is_primary ? '#c62828' : 'transparent', border: `2px solid ${D.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>{contactForm.is_primary ? '✓' : ''}</div>
+                <span style={{ fontSize: 13, color: D.textSub }}>⭐ {t('Primary / Emergency','Головний / Екстрений','Головний / Екстрений')}</span>
+              </div>
+              <button onClick={handleAddContact} disabled={!contactForm.name||!contactForm.phone||saving} style={{ width: '100%', background: contactForm.name&&contactForm.phone ? '#c62828' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
+                {saving ? '⏳' : `+ ${t('Save Contact','Зберегти контакт','Зберегти контакт')}`}
+              </button>
+            </div>
+
+            {/* Medical records */}
+            <SLabel>🏥 {t('Health Records', 'Медичні записи', 'Медичні записи')}</SLabel>
+
+            {medical.map(m => (
+              <div key={m.id} style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 12, marginBottom: 8, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '4px solid #0369a1' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: D.navy }}>{m.title}</div>
+                    {m.value && <div style={{ fontSize: 13, color: D.blue, fontWeight: 600, marginTop: 4 }}>{m.value}</div>}
+                    {m.notes && <div style={{ fontSize: 12, color: D.muted, marginTop: 2 }}>{m.notes}</div>}
+                    {m.valid_until && <div style={{ fontSize: 11, color: D.muted, marginTop: 4 }}>{t('Valid until','Дійсний до','Дійсний до')} {formatDate(m.valid_until)}<ExpiryBadge d={m.valid_until} /></div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <CopyBtn value={m.value || m.title} lang={lang} />
+                    <button onClick={() => handleDeleteMedical(m.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: D.red, fontSize: 14 }}>🗑</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Add medical record form */}
+            <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>+ {t('Add Health Record','Додати медичний запис','Додати медичний запис')}</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 10 }}>
+                {[
+                  {id:'gp', en:'GP Doctor', uk:'Лікар GP'},
+                  {id:'nhs', en:'NHS Number', uk:'NHS номер'},
+                  {id:'allergy', en:'Allergy', uk:'Алергія'},
+                  {id:'med', en:'Medication', uk:'Ліки'},
+                  {id:'blood', en:'Blood Type', uk:'Група крові'},
+                  {id:'other', en:'Other', uk:'Інше'},
+                ].map(tp => (
+                  <button key={tp.id} onClick={() => setMedForm(f=>({...f,type:tp.id}))} style={{ background: medForm.type===tp.id ? '#0369a1' : D.bg, color: medForm.type===tp.id ? '#fff' : D.textSub, border: `1.5px solid ${medForm.type===tp.id ? '#0369a1' : D.border}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    {lang !== 'en' ? tp.uk : tp.en}
+                  </button>
+                ))}
+              </div>
+              <input value={medForm.title} onChange={e=>setMedForm(f=>({...f,title:e.target.value}))} placeholder={t('Title (e.g. Dr Smith, NHS Number…)','Назва (напр. Лікар Сміт, NHS номер…)','Назва (напр. Лікар Сміт, NHS номер…)')} style={{...inputStyle, marginBottom: 8, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
+              <input value={medForm.value} onChange={e=>setMedForm(f=>({...f,value:e.target.value}))} placeholder={t('Value / Number / Phone','Значення / Номер / Телефон','Значення / Номер / Телефон')} style={{...inputStyle, marginBottom: 8, fontFamily: 'monospace', background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
+              <textarea value={medForm.notes} onChange={e=>setMedForm(f=>({...f,notes:e.target.value}))} rows={2} placeholder={t('Notes…','Нотатки…','Нотатки…')} style={{...inputStyle, marginBottom: 8, resize: 'vertical' as const, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
+              <button onClick={handleAddMedical} disabled={!medForm.title||saving} style={{ width: '100%', background: medForm.title ? '#0369a1' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
+                {saving ? '⏳' : `+ ${t('Save Record','Зберегти запис','Зберегти запис')}`}
+              </button>
+            </div>
+          </>
+        )}
+
         {tab === 'profile' && view === 'list' && (
           <>
             <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, borderRadius: 20, padding: '28px 24px 24px', marginBottom: 12, color: '#fff', textAlign: 'center' as const }}>
@@ -1774,8 +2141,30 @@ export default function Page() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <button onClick={() => { setProfForm(profile ?? {}); setView('editProfile') }} style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.navy }}>✏️ {t('Edit Profile', 'Редагувати', 'Редагувати')}</button>
+              <button onClick={() => { setProfForm(profile ?? {}); setView('editProfile') }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: D.navy }}>✏️ {t('Edit Profile', 'Редагувати', 'Редагувати')}</button>
               <button onClick={signOut} style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.red }}>🚪 {t('Sign Out', 'Вийти', 'Вийти')}</button>
+            </div>
+
+            {/* Settings row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <button onClick={toggleTheme} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 22 }}>{dark ? '☀️' : '🌙'}</span>
+                <span>{dark ? t('Light','Світла','Світла') : t('Dark','Темна','Темна')}</span>
+              </button>
+              <button onClick={() => {
+                const pin = prompt(t('Set 4-digit PIN (leave empty to remove):','Введіть 4-значний PIN (порожньо — видалити):','Введіть 4-значний PIN (порожньо — видалити):'))
+                if (pin === null) return
+                if (pin === '') { removePin(); alert(t('PIN removed','PIN видалено','PIN видалено')) }
+                else if (pin.length === 4 && /^\d{4}$/.test(pin)) { setPin(pin); alert(t('PIN set!','PIN встановлено!','PIN встановлено!')) }
+                else alert(t('PIN must be 4 digits','PIN має бути 4 цифри','PIN має бути 4 цифри'))
+              }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 22 }}>🔐</span>
+                <span>PIN</span>
+              </button>
+              <button onClick={() => switchTab('medical')} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 22 }}>🏥</span>
+                <span>{t('Health','Здоров'я','Здоров'я')}</span>
+              </button>
             </div>
             <button onClick={() => setView('export')} style={{ width: '100%', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#166534', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               📤 {t('Export my data', 'Експортувати дані', 'Експортувати дані')}
@@ -1903,26 +2292,25 @@ export default function Page() {
 
       </div>
       {/* ══ BOTTOM TAB BAR ══ */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #e2e8f4', boxShadow: '0 -4px 20px rgba(15,31,61,0.1)', zIndex: 90, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: dark ? '#1e293b' : '#fff', borderTop: `1px solid ${D.border}`, boxShadow: '0 -4px 20px rgba(0,0,0,0.15)', zIndex: 90, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {([
-          { id: 'docs',     icon: '📂', en: 'Docs',    ru: 'Доки',   uk: 'Доки' },
-          { id: 'passport', icon: '📘', en: 'Pass.',    ru: 'Паспорт',uk: 'Паспорт' },
-          { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',     uk: 'CV' },
-          { id: 'address',  icon: '📍', en: 'Addr.',    ru: 'Адреси', uk: 'Адреси' },
-          { id: 'todo',     icon: '✅', en: 'Tasks',    ru: 'Задачі', uk: 'Завдання' },
-          { id: 'profile',  icon: '👤', en: 'Profile',  ru: 'Профіль',uk: 'Профіль' },
+          { id: 'home',     icon: '🏠', en: 'Home',    ru: 'Головна', uk: 'Головна' },
+          { id: 'docs',     icon: '📂', en: 'Docs',    ru: 'Доки',    uk: 'Доки' },
+          { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',      uk: 'CV' },
+          { id: 'medical',  icon: '🏥', en: 'Health',  ru: 'Здоров'я', uk: 'Здоров'я' },
+          { id: 'profile',  icon: '👤', en: 'Profile', ru: 'Профіль', uk: 'Профіль' },
         ] as { id: MainTab; icon: string; en: string; ru: string; uk: string }[]).map(tb => (
           <button key={tb.id} onClick={() => switchTab(tb.id)} style={{
             flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px',
             cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            color: tab === tb.id ? '#0f1f3d' : '#a0aec0',
+            color: tab === tb.id ? (dark ? '#60a5fa' : '#0f1f3d') : (dark ? '#475569' : '#a0aec0'),
             transition: 'color 0.15s',
           }}>
             <div style={{ fontSize: 22, lineHeight: 1, filter: tab === tb.id ? 'none' : 'grayscale(60%)' }}>{tb.icon}</div>
             <div style={{ fontSize: 10, fontWeight: tab === tb.id ? 700 : 500, letterSpacing: '0.02em' }}>
               {lang === 'uk' ? tb.uk : lang === 'ru' ? tb.ru : tb.en}
             </div>
-            {tab === tb.id && <div style={{ width: 20, height: 3, borderRadius: 2, background: '#0f1f3d', marginTop: 1 }} />}
+            {tab === tb.id && <div style={{ width: 20, height: 3, borderRadius: 2, background: dark ? '#60a5fa' : '#0f1f3d', marginTop: 1 }} />}
           </button>
         ))}
       </div>
