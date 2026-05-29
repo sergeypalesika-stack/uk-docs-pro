@@ -2282,20 +2282,11 @@ export default function AppContent() {
       {/* ══ BOTTOM TAB BAR ══ */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: dark ? '#1e293b' : '#fff', borderTop: `1px solid ${D.border}`, boxShadow: '0 -4px 20px rgba(0,0,0,0.15)', zIndex: 90, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {([
-          { id: 'home',     icon: '🏠', en: 'Home',    ru: 'Головна', uk: 'Головна' },
-          { id: 'docs',     icon: '📂', en: 'Docs',    ru: 'Доки',    uk: 'Доки' },
-          { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',      uk: 'CV' },
-          { id: 'medical',  icon: '🏥', en: 'Health',  ru: 'Здоровʼя', uk: 'Здоровʼя' },
-          { id: 'profile',  icon: '👤', en: 'Profile', ru: 'Профіль', uk: 'Профіль' },
-        ].map(function(tb) { return (
-          <button key={tb.id} onClick={function(){ switchTab(tb.id) }} style={{ flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: tab === tb.id ? (dark ? '#60a5fa' : '#0f1f3d') : (dark ? '#475569' : '#a0aec0'), transition: 'color 0.15s' }}>
-            <div style={{ fontSize: 22, lineHeight: 1 }}>{tb.icon}</div>
-            <div style={{ fontSize: 10, fontWeight: tab === tb.id ? 700 : 500 }}>
-              {lang === 'uk' ? tb.uk : lang === 'ru' ? tb.ru : tb.en}
-            </div>
-            {tab === tb.id && <div style={{ width: 20, height: 3, borderRadius: 2, background: dark ? '#60a5fa' : '#0f1f3d', marginTop: 1 }} />}
-          </button>
-        )})}
+  <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="docs"    icon="📂" en="Docs"    ru="Доки"    uk="Доки"      tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="resume"  icon="📝" en="CV"      ru="CV"      uk="CV"        tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="medical" icon="🏥" en="Health"  ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="profile" icon="👤" en="Profile" ru="Профіль" uk="Профіль"  tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
       </div>
       </>
     )}
@@ -2303,6 +2294,19 @@ export default function AppContent() {
   )
 }
 
+
+function NavBtn({ id, icon, en, ru, uk, tab, dark, lang, switchTab }) {
+  const active = tab === id
+  const label = lang === 'uk' ? uk : lang === 'ru' ? ru : en
+  const color = active ? (dark ? '#60a5fa' : '#0f1f3d') : (dark ? '#475569' : '#a0aec0')
+  return (
+    <button onClick={function(){ switchTab(id) }} style={{ flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: color }}>
+      <div style={{ fontSize: 22, lineHeight: 1 }}>{icon}</div>
+      <div style={{ fontSize: 10, fontWeight: active ? 700 : 500 }}>{label}</div>
+      {active && <div style={{ width: 20, height: 3, borderRadius: 2, background: dark ? '#60a5fa' : '#0f1f3d', marginTop: 1 }} />}
+    </button>
+  )
+}
 
 // ── PIN SCREEN COMPONENT (extracted to avoid SWC JSX parse issues)
 function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLabel }: {
