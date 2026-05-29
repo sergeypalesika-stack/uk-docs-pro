@@ -191,7 +191,7 @@ export default function Page() {
       setProfile(prof)
       setProfForm(prof ?? {})
       setDocs(docs)
-      setPassports(passes as Passport[])
+      setPassports(passes)
       setTodos(todos)
       setAddresses(addrs)
       setResumes(res as (Resume & { resume_files: ResumeFile[] })[])
@@ -199,7 +199,7 @@ export default function Page() {
       setContacts(ctcts)
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocsWithPhotos(user.id)
-      setDocs(freshDocs as Doc[])
+      setDocs(freshDocs)
       const saved = localStorage.getItem('uk_lang') as Lang
       if (saved) setLang(saved)
       const th = localStorage.getItem('uk_theme') as Theme
@@ -1692,7 +1692,7 @@ export default function Page() {
                 {/* Files list */}
                 {((selResume as any).resume_files ?? []).length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    {((selResume as any).resume_files as ResumeFile[]).map((rf: ResumeFile) => (
+                    {((selResume as any).resume_files ?? []).map((rf: any) => (
                       <div key={rf.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: C.bg, borderRadius: 12, marginBottom: 8 }}>
                         <span style={{ fontSize: 28, flexShrink: 0 }}>{fileIcon(rf.mime_type)}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -2288,7 +2288,7 @@ export default function Page() {
           { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',      uk: 'CV' },
           { id: 'medical',  icon: '🏥', en: 'Health',  ru: 'Здоровʼя', uk: 'Здоровʼя' },
           { id: 'profile',  icon: '👤', en: 'Profile', ru: 'Профіль', uk: 'Профіль' },
-        ] as { id: MainTab; icon: string; en: string; ru: string; uk: string }[]).map(tb => (
+        ].map((tb) => (
           <button key={tb.id} onClick={() => switchTab(tb.id)} style={{
             flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px',
             cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
