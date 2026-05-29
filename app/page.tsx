@@ -741,37 +741,21 @@ export default function Page() {
 
   // ── PIN SCREEN
   if (pinLocked) return (
-    <div style={{ minHeight: '100vh', background: dark ? '#0f172a' : C.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>UK Docs</div>
-      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 32 }}>{t('Enter PIN to continue', 'Введіть PIN для входу', 'Введіть PIN для входу')}</div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        {[0,1,2,3].map(i => (
-          <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: pinInput.length > i ? (pinError ? '#ef4444' : '#fff') : 'rgba(255,255,255,0.2)', transition: 'all 0.2s' }} />
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, width: '100%', maxWidth: 260 }}>
-        {(['1','2','3','4','5','6','7','8','9','','0','⌫'] as string[]).map((k, i) => (
-          <button key={i} onClick={() => {
-            if (k === '⌫') setPinInput(p => p.slice(0,-1))
-            else if (k === '') return
-            else {
-              const np = pinInput + k
-              setPinInput(np)
-              if (np.length === 4) checkPin(np)
-            }
-          }} style={{
-            background: k === '' ? 'transparent' : 'rgba(255,255,255,0.1)',
-            border: k === '' ? 'none' : '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 16, padding: '20px 0', fontSize: k === '⌫' ? 20 : 24,
-            fontWeight: 600, color: '#fff', cursor: k === '' ? 'default' : 'pointer',
-          }}>{k}</button>
-        ))}
-      </div>
-      <button onClick={() => { removePin(); setPinLocked(false) }} style={{ marginTop: 24, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 13 }}>
-        {t('Forgot PIN? Remove lock', 'Забули PIN? Зняти блокування', 'Забули PIN? Зняти блокування')}
-      </button>
-    </div>
+    <PinScreen
+      pinInput={pinInput}
+      pinError={pinError}
+      dark={dark}
+      onKey={(k: string) => {
+        if (k === 'del') { setPinInput(p => p.slice(0,-1)); return }
+        if (k === '') return
+        const np = pinInput + k
+        setPinInput(np)
+        if (np.length === 4) checkPin(np)
+      }}
+      onRemove={() => { removePin(); setPinLocked(false) }}
+      label={t('Enter PIN to continue', 'Введіть PIN для входу', 'Введіть PIN для входу')}
+      removeLabel={t('Forgot PIN? Remove lock', 'Забули PIN? Зняти блокування', 'Забули PIN? Зняти блокування')}
+    />
   )
 
   if (photoView) return (
@@ -2314,6 +2298,43 @@ export default function Page() {
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+
+// ── PIN SCREEN COMPONENT (extracted to avoid SWC JSX parse issues)
+function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLabel }: {
+  pinInput: string; pinError: boolean; dark: boolean
+  onKey: (k: string) => void; onRemove: () => void
+  label: string; removeLabel: string
+}) {
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
+  return (
+    <div style={{ minHeight: '100vh', background: dark ? '#0f172a' : '#0f1f3d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>UK Docs</div>
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 32 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        {[0,1,2,3].map(idx => (
+          <div key={idx} style={{ width: 16, height: 16, borderRadius: '50%', background: pinInput.length > idx ? (pinError ? '#ef4444' : '#fff') : 'rgba(255,255,255,0.2)', transition: 'all 0.2s' }} />
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, width: '100%', maxWidth: 260 }}>
+        {keys.map((k, idx) => (
+          <button key={idx} onClick={() => onKey(k)} style={{
+            background: k === '' ? 'transparent' : 'rgba(255,255,255,0.1)',
+            border: k === '' ? 'none' : '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 16, padding: '20px 0',
+            fontSize: k === 'del' ? 20 : 24,
+            fontWeight: 600, color: '#fff',
+            cursor: k === '' ? 'default' : 'pointer',
+          }}>{k === 'del' ? '⌫' : k}</button>
+        ))}
+      </div>
+      <button onClick={onRemove} style={{ marginTop: 24, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 13 }}>
+        {removeLabel}
+      </button>
     </div>
   )
 }
