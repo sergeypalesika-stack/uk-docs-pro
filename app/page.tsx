@@ -772,6 +772,7 @@ export default function Page() {
 
       {/* Main app (hidden while loading/locked) */}
       {!loading && !pinLocked && (
+      <>
 
       {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
       <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
@@ -2303,6 +2304,7 @@ export default function Page() {
           </button>
         ))}
       </div>
+      </>
     )}
   </div>
   )
