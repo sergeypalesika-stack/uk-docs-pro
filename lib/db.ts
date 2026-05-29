@@ -324,3 +324,46 @@ export async function getResumesWithFiles(userId: string) {
     .order('updated_at', { ascending: false })
   return (data ?? []) as (Resume & { resume_files: ResumeFile[] })[]
 }
+
+// ── MEDICAL ──────────────────────────────────────────
+export interface MedicalRecord {
+  id: string; user_id: string; type: string
+  title: string; value: string; notes: string
+  valid_until: string | null; created_at: string
+}
+
+export async function getMedical(userId: string) {
+  const { data } = await sb().from('medical').select('*').eq('user_id', userId).order('created_at')
+  return (data ?? []) as MedicalRecord[]
+}
+export async function addMedical(userId: string, r: Omit<MedicalRecord,'id'|'user_id'|'created_at'>) {
+  const { data } = await sb().from('medical').insert({ user_id: userId, ...r }).select().single()
+  return data as MedicalRecord | null
+}
+export async function updateMedical(id: string, fields: Partial<MedicalRecord>) {
+  return sb().from('medical').update(fields).eq('id', id)
+}
+export async function deleteMedical(id: string) {
+  return sb().from('medical').delete().eq('id', id)
+}
+
+// ── EMERGENCY CONTACTS ────────────────────────────────
+export interface Contact {
+  id: string; user_id: string; name: string; relation: string
+  phone: string; notes: string; is_primary: boolean; created_at: string
+}
+
+export async function getContacts(userId: string) {
+  const { data } = await sb().from('emergency_contacts').select('*').eq('user_id', userId).order('is_primary', { ascending: false }).order('created_at')
+  return (data ?? []) as Contact[]
+}
+export async function addContact(userId: string, c: Omit<Contact,'id'|'user_id'|'created_at'>) {
+  const { data } = await sb().from('emergency_contacts').insert({ user_id: userId, ...c }).select().single()
+  return data as Contact | null
+}
+export async function updateContact(id: string, fields: Partial<Contact>) {
+  return sb().from('emergency_contacts').update(fields).eq('id', id)
+}
+export async function deleteContact(id: string) {
+  return sb().from('emergency_contacts').delete().eq('id', id)
+}
