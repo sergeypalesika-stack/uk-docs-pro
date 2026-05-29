@@ -106,17 +106,9 @@ export default function AppContent() {
 
   // Dark mode
   const dark = theme === 'dark'
-  const D = dark ? {
-    navy: '#e2e8f0', navyM: '#cbd5e1', blue: '#60a5fa', accent: '#3b82f6',
-    surface: '#1e293b', bg: '#0f172a', border: '#334155',
-    muted: '#64748b', text: '#f1f5f9', textSub: '#94a3b8',
-    red: '#f87171', green: '#4ade80'
-  } : {
-    navy: C.navy, navyM: C.navyM, blue: C.blue, accent: C.accent,
-    surface: C.surface, bg: C.bg, border: C.border,
-    muted: C.muted, text: C.text, textSub: C.textSub,
-    red: C.red, green: C.green
-  }
+  const Dd = { navy: '#e2e8f0', navyM: '#cbd5e1', blue: '#60a5fa', accent: '#3b82f6', surface: '#1e293b', bg: '#0f172a', border: '#334155', muted: '#64748b', text: '#f1f5f9', textSub: '#94a3b8', red: '#f87171', green: '#4ade80' }
+  const Dl = { navy: C.navy, navyM: C.navyM, blue: C.blue, accent: C.accent, surface: C.surface, bg: C.bg, border: C.border, muted: C.muted, text: C.text, textSub: C.textSub, red: C.red, green: C.green }
+  const D = dark ? Dd : Dl
 
   const toggleTheme = () => {
     const nt = theme === 'light' ? 'dark' : 'light'
