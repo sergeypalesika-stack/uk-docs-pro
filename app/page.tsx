@@ -751,7 +751,7 @@ export default function Page() {
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, width: '100%', maxWidth: 260 }}>
-        {[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map((k, i) => (
+        {(['1','2','3','4','5','6','7','8','9','','0','⌫'] as string[]).map((k, i) => (
           <button key={i} onClick={() => {
             if (k === '⌫') setPinInput(p => p.slice(0,-1))
             else if (k === '') return
