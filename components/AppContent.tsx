@@ -2287,20 +2287,15 @@ export default function AppContent() {
           { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',      uk: 'CV' },
           { id: 'medical',  icon: '🏥', en: 'Health',  ru: 'Здоровʼя', uk: 'Здоровʼя' },
           { id: 'profile',  icon: '👤', en: 'Profile', ru: 'Профіль', uk: 'Профіль' },
-        ].map((tb) => (
-          <button key={tb.id} onClick={() => switchTab(tb.id)} style={{
-            flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px',
-            cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            color: tab === tb.id ? (dark ? '#60a5fa' : '#0f1f3d') : (dark ? '#475569' : '#a0aec0'),
-            transition: 'color 0.15s',
-          }}>
-            <div style={{ fontSize: 22, lineHeight: 1, filter: tab === tb.id ? 'none' : 'grayscale(60%)' }}>{tb.icon}</div>
-            <div style={{ fontSize: 10, fontWeight: tab === tb.id ? 700 : 500, letterSpacing: '0.02em' }}>
+        ].map(function(tb) { return (
+          <button key={tb.id} onClick={function(){ switchTab(tb.id) }} style={{ flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: tab === tb.id ? (dark ? '#60a5fa' : '#0f1f3d') : (dark ? '#475569' : '#a0aec0'), transition: 'color 0.15s' }}>
+            <div style={{ fontSize: 22, lineHeight: 1 }}>{tb.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: tab === tb.id ? 700 : 500 }}>
               {lang === 'uk' ? tb.uk : lang === 'ru' ? tb.ru : tb.en}
             </div>
             {tab === tb.id && <div style={{ width: 20, height: 3, borderRadius: 2, background: dark ? '#60a5fa' : '#0f1f3d', marginTop: 1 }} />}
           </button>
-        ))}
+        )})}
       </div>
       </>
     )}
