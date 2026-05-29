@@ -102,7 +102,7 @@ export default function AppContent() {
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
 
-  const t = useCallback((en: string, ru: string, uk?: string) => lang === 'ru' ? ru : lang === 'uk' ? (uk ?? ru) : en, [lang])
+  const t = useCallback((en, ru, uk) => lang === 'ru' ? ru : lang === 'uk' ? (uk || ru) : en, [lang])
 
   // Dark mode
   const dark = theme === 'dark'
@@ -165,14 +165,18 @@ export default function AppContent() {
 
   // Global search results
   const gq = globalSearch.toLowerCase().trim()
-  const searchResults = gq.length > 1 ? [
-    ...docs.filter(d => d.title.toLowerCase().includes(gq) || (d.title_ru ?? '').toLowerCase().includes(gq) || (d.number ?? '').toLowerCase().includes(gq)).map(d => ({ type: 'doc', icon: '📄', title: d.title, sub: d.number ?? '', id: d.id, action: () => { setTab('docs'); setSelDoc(d); setView('detail'); setShowSearch(false); setGlobalSearch('') } })),
-    ...passports.filter(p => p.type.toLowerCase().includes(gq) || p.number.toLowerCase().includes(gq)).map(p => ({ type: 'pass', icon: '📘', title: p.type, sub: p.number, id: p.id, action: () => { setTab('passport'); setSelPass(p); setView('passportDetail'); setShowSearch(false); setGlobalSearch('') } })),
-    ...addresses.filter(a => a.label.toLowerCase().includes(gq) || a.city.toLowerCase().includes(gq)).map(a => ({ type: 'addr', icon: '📍', title: a.label, sub: [a.city, a.postcode].filter(Boolean).join(', '), id: a.id, action: () => { setTab('address'); setSelAddr(a); setView('detail'); setShowSearch(false); setGlobalSearch('') } })),
-    ...resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).map(r => ({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } })),
-    ...todos.filter(t => t.text.toLowerCase().includes(gq) || t.textRu.toLowerCase().includes(gq)).map(t => ({ type: 'todo', icon: t.done ? '✅' : '⬜', title: t.text, sub: '', id: t.id, action: () => { setTab('todo'); setShowSearch(false); setGlobalSearch('') } })),
-  ] : []
-  const cat = (id) => CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]
+  const getSearchResults = () => {
+    if (gq.length <= 1) return []
+    const results = []
+    docs.filter(d => d.title.toLowerCase().includes(gq) || (d.title_ru || '').toLowerCase().includes(gq) || (d.number || '').toLowerCase().includes(gq)).forEach(d => results.push({ type: 'doc', icon: '📄', title: d.title, sub: d.number || '', id: d.id, action: () => { setTab('docs'); setSelDoc(d); setView('detail'); setShowSearch(false); setGlobalSearch('') } }))
+    passports.filter(p => p.type.toLowerCase().includes(gq) || p.number.toLowerCase().includes(gq)).forEach(p => results.push({ type: 'pass', icon: '📘', title: p.type, sub: p.number, id: p.id, action: () => { setTab('passport'); setSelPass(p); setView('passportDetail'); setShowSearch(false); setGlobalSearch('') } }))
+    addresses.filter(a => a.label.toLowerCase().includes(gq) || a.city.toLowerCase().includes(gq)).forEach(a => results.push({ type: 'addr', icon: '📍', title: a.label, sub: [a.city, a.postcode].filter(Boolean).join(', '), id: a.id, action: () => { setTab('address'); setSelAddr(a); setView('detail'); setShowSearch(false); setGlobalSearch('') } }))
+    resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).forEach(r => results.push({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } }))
+    todos.filter(t => t.text.toLowerCase().includes(gq) || t.textRu.toLowerCase().includes(gq)).forEach(t => results.push({ type: 'todo', icon: t.done ? '✅' : '⬜', title: t.text, sub: '', id: t.id, action: () => { setTab('todo'); setShowSearch(false); setGlobalSearch('') } }))
+    return results
+  }
+  const searchResults = getSearchResults()
+  const cat = (id) => CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1]
 
   // ── LOAD
   useEffect(() => {
@@ -191,7 +195,7 @@ export default function AppContent() {
         DB.getContacts(user.id),
       ])
       setProfile(prof)
-      setProfForm(prof ?? {})
+      setProfForm(prof || {})
       setDocs(docs)
       setPassports(passes)
       setTodos(todos)
@@ -221,11 +225,11 @@ export default function AppContent() {
     docs.forEach(d => {
       const c = CATEGORIES.find(c => c.id === d.category)
       rows.push([
-        c?.label ?? d.category,
-        d.title, d.title_ru ?? '',
-        d.number ?? '',
-        d.valid_from ?? '', d.valid_until ?? '',
-        d.notes ?? '',
+        c?.label || d.category,
+        d.title, d.title_ru || '',
+        d.number || '',
+        d.valid_from || '', d.valid_until || '',
+        d.notes || '',
       ])
     })
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
@@ -241,13 +245,13 @@ export default function AppContent() {
   const exportPrint = () => {
     const name = profile?.name || user?.email || 'User'
     const dob  = profile?.dob ? formatDate(profile.dob) : '—'
-    const expiring = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x >= 0 && x <= 90 })
-    const expired  = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x < 0 })
+    const expiring = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 90 })
+    const expired  = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x < 0 })
 
     const docRows = docs.map(d => {
       const c = CATEGORIES.find(c => c.id === d.category)
-      const status = d.valid_until ? (daysUntil(d.valid_until ?? '')! < 0 ? '❌ EXPIRED' : `✓ ${daysUntil(d.valid_until ?? '')}d left`) : '—'
-      return `<tr><td>${c?.icon ?? ''} ${d.title}</td><td style="font-family:monospace">${d.number || '—'}</td><td>${d.valid_until ? formatDate(d.valid_until) : '—'}</td><td>${status}</td></tr>`
+      const status = d.valid_until ? (daysUntil(d.valid_until || '')! < 0 ? '❌ EXPIRED' : `✓ ${daysUntil(d.valid_until || '')}d left`) : '—'
+      return `<tr><td>${c?.icon || ''} ${d.title}</td><td style="font-family:monospace">${d.number || '—'}</td><td>${d.valid_until ? formatDate(d.valid_until) : '—'}</td><td>${status}</td></tr>`
     }).join('')
 
     const addrRows = addresses.map(a =>
@@ -278,8 +282,8 @@ export default function AppContent() {
     ${expiring.length > 0 || expired.length > 0 ? `
     <h2>⚠️ Attention Required</h2>
     <table><tr><th>Document</th><th>Status</th></tr>
-    ${expired.map(d=>`<tr class="expired"><td>${d.title}</td><td>EXPIRED ${formatDate(d.valid_until ?? '')}</td></tr>`).join('')}
-    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Expires in ${daysUntil(d.valid_until ?? '')} days — ${formatDate(d.valid_until ?? '')}</td></tr>`).join('')}
+    ${expired.map(d=>`<tr class="expired"><td>${d.title}</td><td>EXPIRED ${formatDate(d.valid_until || '')}</td></tr>`).join('')}
+    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Expires in ${daysUntil(d.valid_until || '')} days — ${formatDate(d.valid_until || '')}</td></tr>`).join('')}
     </table>` : ''}
 
     <h2>📂 Documents (${docs.length})</h2>
@@ -339,7 +343,7 @@ export default function AppContent() {
   })
   const pinned = filteredDocs.filter(d => d.pinned)
   const rest   = filteredDocs.filter(d => !d.pinned)
-  const expiring60 = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x >= 0 && x <= 60 })
+  const expiring60 = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 60 })
   const todoDone   = todos.filter(t => t.done).length
 
   // ── DOC ACTIONS
@@ -401,7 +405,7 @@ export default function AppContent() {
       // Fallback: raw base64 if canvas fails
       const fallback = () => {
         const r = new FileReader()
-        r.onload = e => resolve(e.target?.result ?? '')
+        r.onload = e => resolve(e.target?.result || '')
         r.onerror = () => resolve('')
         r.readAsDataURL(file)
       }
@@ -455,7 +459,7 @@ export default function AppContent() {
           ? { ...p, passport_photos: [...p.passport_photos, ph] }
           : p)
         setPassports(updated)
-        setSelPass(updated.find(p => p.id === selPass.id) ?? null)
+        setSelPass(updated.find(p => p.id === selPass.id) || null)
       }
       setPhotoLabel('')
     } catch(e) {
@@ -468,7 +472,7 @@ export default function AppContent() {
     await DB.deletePassportPhoto(photoId)
     const updated = passports.map(p => p.id === passportId ? { ...p, passport_photos: p.passport_photos.filter(ph => ph.id !== photoId) } : p)
     setPassports(updated)
-    setSelPass(updated.find(p => p.id === passportId) ?? null)
+    setSelPass(updated.find(p => p.id === passportId) || null)
   }
 
   // ── TODO
@@ -518,12 +522,12 @@ export default function AppContent() {
     setFileUploading(true)
     const reader = new FileReader()
     reader.onload = async e => {
-      const base64 = (e.target?.result) ?? ''
+      const base64 = (e.target?.result) || ''
       const rf = await DB.addResumeFile(selResume.id, user.id, file.name, file.type, file.size, base64)
       if (rf) {
-        const updated = { ...selResume, resume_files: [...(selResume).resume_files ?? [], rf] }
+        const updated = { ...selResume, resume_files: [...(selResume).resume_files || [], rf] }
         setSelResume(updated)
-        setResumes(prev => prev.map(r => r.id === selResume.id ? { ...r, resume_files: [...(r).resume_files ?? [], rf] } : r))
+        setResumes(prev => prev.map(r => r.id === selResume.id ? { ...r, resume_files: [...(r).resume_files || [], rf] } : r))
       }
       setFileUploading(false)
     }
@@ -534,7 +538,7 @@ export default function AppContent() {
   const handleDeleteResumeFile = async (fileId) => {
     if (!selResume) return
     await DB.deleteResumeFile(fileId)
-    const updated = { ...selResume, resume_files: ((selResume).resume_files ?? []).filter((f) => f.id !== fileId) }
+    const updated = { ...selResume, resume_files: ((selResume).resume_files || []).filter((f) => f.id !== fileId) }
     setSelResume(updated)
     setResumes(prev => prev.map(r => r.id === selResume.id ? updated : r))
   }
@@ -588,7 +592,7 @@ export default function AppContent() {
     { id: 'interview', en: 'Interview', ru: 'Інтервʼю',  uk: 'Інтервʼю', color: '#b45309', bg: '#fff7ed' },
     { id: 'rejected',  en: 'Rejected',  ru: 'Відмова',     uk: 'Відмова',   color: '#c62828', bg: '#fee2e2' },
   ]
-  const resumeStatus = (id) => RESUME_STATUSES.find(s => s.id === id) ?? RESUME_STATUSES[0]
+  const resumeStatus = (id) => RESUME_STATUSES.find(s => s.id === id) || RESUME_STATUSES[0]
 
   const RESUME_COLORS = ['#1a4480','#0369a1','#2e7d32','#b45309','#c62828','#5b21b6','#0f766e','#1a2a4a']
 
@@ -663,7 +667,7 @@ export default function AppContent() {
       const dataUrl = await compressImage(file)
       const ph = await DB.addDocPhoto(selDoc.id, user.id, label, dataUrl)
       if (ph) {
-        const updated = { ...selDoc, document_photos: [...(selDoc.document_photos ?? []), ph] }
+        const updated = { ...selDoc, document_photos: [...(selDoc.document_photos || []), ph] }
         setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
         setSelDoc(updated)
       }
@@ -678,7 +682,7 @@ export default function AppContent() {
   const handleDeleteDocPhoto = async (photoId) => {
     if (!selDoc) return
     await DB.deleteDocPhoto(photoId)
-    const updated = { ...selDoc, document_photos: (selDoc.document_photos ?? []).filter(p => p.id !== photoId) }
+    const updated = { ...selDoc, document_photos: (selDoc.document_photos || []).filter(p => p.id !== photoId) }
     setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
     setSelDoc(updated)
   }
@@ -729,7 +733,7 @@ export default function AppContent() {
   const handleSaveProfile = async () => {
     if (!user) return
     setSaving(true)
-    await DB.upsertProfile(user.id, { name: profForm.name ?? '', name_ru: profForm.name_ru ?? '', dob: profForm.dob ?? '', nationality: profForm.nationality ?? 'Ukrainian', avatar: profForm.avatar ?? '👤' })
+    await DB.upsertProfile(user.id, { name: profForm.name || '', name_ru: profForm.name_ru || '', dob: profForm.dob || '', nationality: profForm.nationality || 'Ukrainian', avatar: profForm.avatar || '👤' })
     const fresh = await DB.getProfile(user.id)
     setProfile(fresh); setSaving(false); setView('list')
   }
@@ -792,7 +796,7 @@ export default function AppContent() {
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🇬🇧</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 18 }}>{profile?.avatar ?? '👤'}</span>
+                <span style={{ fontSize: 18 }}>{profile?.avatar || '👤'}</span>
                 <span>{profile?.name || user?.email?.split('@')[0] || 'User'}</span>
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{user?.email}</div>
@@ -885,21 +889,21 @@ export default function AppContent() {
 
             {/* Expiry alerts */}
             {(() => {
-              const urgent = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x >= 0 && x <= 30 })
-              const expiring = docs.filter(d => { const x = daysUntil(d.valid_until ?? ''); return x !== null && x > 30 && x <= 90 })
+              const urgent = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 30 })
+              const expiring = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x > 30 && x <= 90 })
               return urgent.length > 0 || expiring.length > 0 ? (
                 <div style={{ background: dark ? '#3b1515' : '#fff7ed', border: `1px solid ${dark ? '#7f1d1d' : '#fed7aa'}`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: dark ? '#fca5a5' : '#c2410c', marginBottom: 8 }}>⚠️ {t('Action required', 'Потрібна увага', 'Потрібна увага')}</div>
                   {urgent.map(d => (
                     <div key={d.id} onClick={() => { setTab('docs'); setSelDoc(d); setView('detail') }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: dark ? '#fca5a5' : '#7c2d12', marginBottom: 4, cursor: 'pointer', padding: '4px 0' }}>
                       <span>🔴 {d.title_ru && lang !== 'en' ? d.title_ru : d.title}</span>
-                      <span style={{ fontWeight: 700 }}>{daysUntil(d.valid_until ?? '')}d</span>
+                      <span style={{ fontWeight: 700 }}>{daysUntil(d.valid_until || '')}d</span>
                     </div>
                   ))}
                   {expiring.map(d => (
                     <div key={d.id} onClick={() => { setTab('docs'); setSelDoc(d); setView('detail') }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: dark ? '#fcd34d' : '#92400e', marginBottom: 4, cursor: 'pointer', padding: '4px 0' }}>
                       <span>🟡 {d.title_ru && lang !== 'en' ? d.title_ru : d.title}</span>
-                      <span>{daysUntil(d.valid_until ?? '')}d</span>
+                      <span>{daysUntil(d.valid_until || '')}d</span>
                     </div>
                   ))}
                 </div>
@@ -978,7 +982,7 @@ export default function AppContent() {
             {expiring60.length > 0 && (
               <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#c2410c', marginBottom: 6 }}>⚠️ {t('Expiring soon', 'Спливає скоро', 'Спливає скоро')}</div>
-                {expiring60.map(d => <div key={d.id} style={{ fontSize: 12, color: '#7c2d12', marginBottom: 2 }}>· {lang !== 'en' && d.title_ru ? d.title_ru : d.title} — {daysUntil(d.valid_until ?? '')}d</div>)}
+                {expiring60.map(d => <div key={d.id} style={{ fontSize: 12, color: '#7c2d12', marginBottom: 2 }}>· {lang !== 'en' && d.title_ru ? d.title_ru : d.title} — {daysUntil(d.valid_until || '')}d</div>)}
               </div>
             )}
             <div style={{ position: 'relative', marginBottom: 14 }}>
@@ -1024,7 +1028,7 @@ export default function AppContent() {
               {(selDoc.notes || selDoc.notes_ru) && <DRow label={t('Notes', 'Нотатки', 'Нотатки')}><span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>{lang !== 'en' && selDoc.notes_ru ? selDoc.notes_ru : selDoc.notes}</span></DRow>}
             </div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-              <button onClick={() => { setDocForm({ category: selDoc.category, title: selDoc.title, title_ru: selDoc.title_ru, number: selDoc.number, valid_from: selDoc.valid_from ?? '', valid_until: selDoc.valid_until ?? '', notes: selDoc.notes, notes_ru: selDoc.notes_ru, pinned: selDoc.pinned }); setView('edit') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>✏️ {t('Edit', 'Змінити', 'Змінити')}</button>
+              <button onClick={() => { setDocForm({ category: selDoc.category, title: selDoc.title, title_ru: selDoc.title_ru, number: selDoc.number, valid_from: selDoc.valid_from || '', valid_until: selDoc.valid_until || '', notes: selDoc.notes, notes_ru: selDoc.notes_ru, pinned: selDoc.pinned }); setView('edit') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>✏️ {t('Edit', 'Змінити', 'Змінити')}</button>
               <button onClick={() => handleTogglePin(selDoc)} style={{ flex: 1, background: selDoc.pinned ? '#fef9c3' : C.surface, color: selDoc.pinned ? '#854d0e' : C.textSub, border: `1.5px solid ${selDoc.pinned ? '#fde047' : C.border}`, borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📌 {selDoc.pinned ? t('Unpin', 'Відкріпити', 'Відкріпити') : t('Pin', 'Закріпити', 'Закріпити')}</button>
               <button onClick={() => setConfirmDel(selDoc.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑</button>
             </div>
@@ -1034,14 +1038,14 @@ export default function AppContent() {
               <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                 📸 {t('Document Photos', 'Фото документа', 'Фото документа')}
                 <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>
-                  {(selDoc.document_photos ?? []).length}
+                  {(selDoc.document_photos || []).length}
                 </span>
               </div>
 
               {/* Photo grid */}
-              {(selDoc.document_photos ?? []).length > 0 && (
+              {(selDoc.document_photos || []).length > 0 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                  {(selDoc.document_photos ?? []).map(ph => (
+                  {(selDoc.document_photos || []).map(ph => (
                     <div key={ph.id} style={{ position: 'relative' }}>
                       <img
                         src={ph.data_url} alt={ph.label}
@@ -1580,7 +1584,7 @@ export default function AppContent() {
                           {r.company && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>🏢 {r.company}</div>}
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 4, display: 'flex', gap: 10 }}>
                             <span>{t('Updated', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)}</span>
-                            {((r).resume_files?.length ?? 0) > 0 && (
+                            {((r).resume_files?.length || 0) > 0 && (
                               <span>📎 {(r).resume_files.length}</span>
                             )}
                           </div>
@@ -1689,13 +1693,13 @@ export default function AppContent() {
               {/* ── ATTACHED FILES ── */}
               <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>📎 {t('Attached Files', 'Прикріплені файли', 'Прикріплені файли')} <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{((selResume).resume_files ?? []).length}</span></span>
+                  <span>📎 {t('Attached Files', 'Прикріплені файли', 'Прикріплені файли')} <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{((selResume).resume_files || []).length}</span></span>
                 </div>
 
                 {/* Files list */}
-                {((selResume).resume_files ?? []).length > 0 && (
+                {((selResume).resume_files || []).length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    {((selResume).resume_files ?? []).map((rf: any) => (
+                    {((selResume).resume_files || []).map((rf: any) => (
                       <div key={rf.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: C.bg, borderRadius: 12, marginBottom: 8 }}>
                         <span style={{ fontSize: 28, flexShrink: 0 }}>{fileIcon(rf.mime_type)}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1914,7 +1918,7 @@ export default function AppContent() {
                         <div onClick={() => handleToggleTodo(item)} style={{ flex: 1, fontSize: 13, color: item.done ? '#4ade80' : C.text, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4, cursor: 'pointer' }}>
                           {lang !== 'en' ? item.textRu || item.text : item.text}
                         </div>
-                        <span style={{ fontSize: 14 }}>{CATEGORIES.find(c => c.id === item.category)?.icon ?? '📁'}</span>
+                        <span style={{ fontSize: 14 }}>{CATEGORIES.find(c => c.id === item.category)?.icon || '📁'}</span>
                         {/* Edit button */}
                         <button onClick={() => { setSelTodo(item); setTodoForm({ text: item.text, textRu: item.textRu, category: item.category, week: item.week }); setView('editTodo') }}
                           style={{ background: '#eff6ff', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.blue, flexShrink: 0 }}>
@@ -2122,7 +2126,7 @@ export default function AppContent() {
         {tab === 'profile' && view === 'list' && (
           <>
             <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, borderRadius: 20, padding: '28px 24px 24px', marginBottom: 12, color: '#fff', textAlign: 'center' as const }}>
-              <div style={{ fontSize: 60, marginBottom: 10 }}>{profile?.avatar ?? '👤'}</div>
+              <div style={{ fontSize: 60, marginBottom: 10 }}>{profile?.avatar || '👤'}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{profile?.name || user?.email?.split('@')[0]}</div>
               {profile?.name_ru && <div style={{ fontSize: 14, opacity: 0.6, marginTop: 2 }}>{profile.name_ru}</div>}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 14 }}>
@@ -2133,7 +2137,7 @@ export default function AppContent() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <button onClick={() => { setProfForm(profile ?? {}); setView('editProfile') }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: D.navy }}>✏️ {t('Edit Profile', 'Редагувати', 'Редагувати')}</button>
+              <button onClick={() => { setProfForm(profile || {}); setView('editProfile') }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: D.navy }}>✏️ {t('Edit Profile', 'Редагувати', 'Редагувати')}</button>
               <button onClick={signOut} style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.red }}>🚪 {t('Sign Out', 'Вийти', 'Вийти')}</button>
             </div>
 
@@ -2267,11 +2271,11 @@ export default function AppContent() {
                 {AVATARS.map(a => <button key={a} onClick={() => setProfForm(f => ({ ...f, avatar: a }))} style={{ width: 44, height: 44, borderRadius: 10, fontSize: 24, border: `2px solid ${profForm.avatar === a ? C.navy : C.border}`, background: profForm.avatar === a ? C.bg : 'transparent', cursor: 'pointer' }}>{a}</button>)}
               </div>
             </FField>
-            <FField label={t('Full name (EN)', 'Имя (EN)')}><input value={profForm.name ?? ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Sergii Palesika" style={inputStyle} /></FField>
-            <FField label={t('Full name (RU)', 'Имя (RU)')}><input value={profForm.name_ru ?? ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} placeholder="Сергей Палесика" style={inputStyle} /></FField>
-            <FField label={t('Date of Birth', 'Дата народження', 'Дата народження')}><input type="date" value={profForm.dob ?? ''} onChange={e => setProfForm(f => ({ ...f, dob: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Full name (EN)', 'Имя (EN)')}><input value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Sergii Palesika" style={inputStyle} /></FField>
+            <FField label={t('Full name (RU)', 'Имя (RU)')}><input value={profForm.name_ru || ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} placeholder="Сергей Палесика" style={inputStyle} /></FField>
+            <FField label={t('Date of Birth', 'Дата народження', 'Дата народження')}><input type="date" value={profForm.dob || ''} onChange={e => setProfForm(f => ({ ...f, dob: e.target.value }))} style={inputStyle} /></FField>
             <FField label={t('Nationality', 'Громадянство', 'Громадянство')}>
-              <select value={profForm.nationality ?? 'Ukrainian'} onChange={e => setProfForm(f => ({ ...f, nationality: e.target.value }))} style={inputStyle}>
+              <select value={profForm.nationality || 'Ukrainian'} onChange={e => setProfForm(f => ({ ...f, nationality: e.target.value }))} style={inputStyle}>
                 {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </FField>
@@ -2362,7 +2366,7 @@ function DocCard({ doc, cat, lang, onOpen }: { doc: Doc; cat: { icon: string; co
         </div>
         {doc.number && <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#4a5568', fontWeight: 600, letterSpacing: '0.04em' }}>{doc.number}</div>}
         {doc.valid_until && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{lang !== 'en' ? 'до' : 'until'} {formatDate(doc.valid_until)}</div>}
-        {(doc.document_photos?.length ?? 0) > 0 && (
+        {(doc.document_photos?.length || 0) > 0 && (
           <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>📸 {doc.document_photos!.length} {lang !== 'en' ? 'фото' : 'photo(s)'}</div>
         )}
       </div>
