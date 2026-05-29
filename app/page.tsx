@@ -60,7 +60,7 @@ export default function Page() {
   const [selAddr,   setSelAddr]   = useState<Address | null>(null)
   const [resumes,   setResumes]   = useState<Resume[]>([])
   const [selResume, setSelResume] = useState<Resume | null>(null)
-  const EMPTY_RESUME: Omit<Resume,'id'|'user_id'|'created_at'|'updated_at'> = {
+  const EMPTY_RESUME = {
     title:'', direction:'', company:'', status:'draft',
     summary:'', skills:'', experience:'', education:'', notes:'',
     color:'#1a4480', pinned:false
@@ -1880,7 +1880,7 @@ export default function Page() {
             </div>
 
             {Array.from(new Set(todos.map(t => t.week))).sort((a, b) => a - b).map(w => {
-              const wL: Record<number, { en: string; ru: string }> = {
+              const wL = {
                 0: { en: '📅 Days 1–2 · Arrival', ru: '📅 Дни 1–2 · Прибытие' },
                 1: { en: '📅 Days 3–5 · Critical Steps', ru: '📅 Дни 3–5 · Критически важные шаги' },
                 2: { en: '📅 Week 2 · Housing & School', ru: '📅 Неделя 2 · Жильё и школа' },
@@ -2056,7 +2056,7 @@ export default function Page() {
             <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>+ {t('Add Contact', 'Додати контакт', 'Додати контакт')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                <div><input value={contactForm.name} onChange={e=>setContactForm(f=>({...f,name:e.target.value}))} placeholder={t('Name','Ім'я','Ім'я')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
+                <div><input value={contactForm.name} onChange={e=>setContactForm(f=>({...f,name:e.target.value}))} placeholder={t('Name','Імʼя','Імʼя')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
                 <div><input value={contactForm.relation} onChange={e=>setContactForm(f=>({...f,relation:e.target.value}))} placeholder={t('Relation','Хто це','Хто це')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
               </div>
               <input value={contactForm.phone} onChange={e=>setContactForm(f=>({...f,phone:e.target.value}))} placeholder="+44 7700 900000" type="tel" style={{...inputStyle, marginBottom: 10, fontFamily: 'monospace', fontSize: 16, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
@@ -2152,7 +2152,7 @@ export default function Page() {
               </button>
               <button onClick={() => switchTab('medical')} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>🏥</span>
-                <span>{t('Health','Здоров'я','Здоров'я')}</span>
+                <span>{t('Health','Здоровʼя','Здоровʼя')}</span>
               </button>
             </div>
             <button onClick={() => setView('export')} style={{ width: '100%', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#166534', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -2286,7 +2286,7 @@ export default function Page() {
           { id: 'home',     icon: '🏠', en: 'Home',    ru: 'Головна', uk: 'Головна' },
           { id: 'docs',     icon: '📂', en: 'Docs',    ru: 'Доки',    uk: 'Доки' },
           { id: 'resume',   icon: '📝', en: 'CV',       ru: 'CV',      uk: 'CV' },
-          { id: 'medical',  icon: '🏥', en: 'Health',  ru: 'Здоров'я', uk: 'Здоров'я' },
+          { id: 'medical',  icon: '🏥', en: 'Health',  ru: 'Здоровʼя', uk: 'Здоровʼя' },
           { id: 'profile',  icon: '👤', en: 'Profile', ru: 'Профіль', uk: 'Профіль' },
         ] as { id: MainTab; icon: string; en: string; ru: string; uk: string }[]).map(tb => (
           <button key={tb.id} onClick={() => switchTab(tb.id)} style={{
