@@ -732,41 +732,46 @@ export default function Page() {
     setProfile(fresh); setSaving(false); setView('list')
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, flexDirection: 'column', gap: 16 }}>
-      <div style={{ fontSize: 48 }}>🇬🇧</div>
-      <div style={{ color: C.muted, fontSize: 14 }}>Loading your documents…</div>
-    </div>
-  )
-
-  // ── PIN SCREEN
-  if (pinLocked) return (
-    <PinScreen
-      pinInput={pinInput}
-      pinError={pinError}
-      dark={dark}
-      onKey={(k: string) => {
-        if (k === 'del') { setPinInput(p => p.slice(0,-1)); return }
-        if (k === '') return
-        const np = pinInput + k
-        setPinInput(np)
-        if (np.length === 4) checkPin(np)
-      }}
-      onRemove={() => { removePin(); setPinLocked(false) }}
-      label={t('Enter PIN to continue', 'Введіть PIN для входу', 'Введіть PIN для входу')}
-      removeLabel={t('Forgot PIN? Remove lock', 'Забули PIN? Зняти блокування', 'Забули PIN? Зняти блокування')}
-    />
-  )
-
-  if (photoView) return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPhotoView(null)}>
-      <img src={photoView} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
-      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 16 }}>{t('Tap to close', 'Натисни щоб закрити', 'Натисни щоб закрити')}</div>
-    </div>
-  )
-
   return (
     <div style={{ minHeight: '100vh', background: theme === 'dark' ? '#0f172a' : C.bg, color: theme === 'dark' ? '#f1f5f9' : C.text }}>
+
+      {/* Loading */}
+      {loading && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, flexDirection: 'column', gap: 16, zIndex: 500 }}>
+          <div style={{ fontSize: 48 }}>🇬🇧</div>
+          <div style={{ color: C.muted, fontSize: 14 }}>Loading your documents…</div>
+        </div>
+      )}
+
+      {/* PIN Screen */}
+      {pinLocked && !loading && (
+        <PinScreen
+          pinInput={pinInput}
+          pinError={pinError}
+          dark={dark}
+          onKey={(k) => {
+            if (k === 'del') { setPinInput(p => p.slice(0,-1)); return }
+            if (k === '') return
+            const np = pinInput + k
+            setPinInput(np)
+            if (np.length === 4) checkPin(np)
+          }}
+          onRemove={() => { removePin(); setPinLocked(false) }}
+          label={t('Enter PIN to continue', 'Введіть PIN для входу', 'Введіть PIN для входу')}
+          removeLabel={t('Forgot PIN? Remove lock', 'Забули PIN? Зняти блокування', 'Забули PIN? Зняти блокування')}
+        />
+      )}
+
+      {/* Photo viewer */}
+      {photoView && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPhotoView(null)}>
+          <img src={photoView} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 16 }}>{t('Tap to close', 'Натисни щоб закрити', 'Натисни щоб закрити')}</div>
+        </div>
+      )}
+
+      {/* Main app (hidden while loading/locked) */}
+      {!loading && !pinLocked && (
 
       {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
       <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
@@ -2298,7 +2303,8 @@ export default function Page() {
           </button>
         ))}
       </div>
-    </div>
+    )}
+  </div>
   )
 }
 
