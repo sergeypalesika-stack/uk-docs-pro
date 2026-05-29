@@ -329,7 +329,7 @@ export default function AppContent() {
   }
 
   const switchLang = () => { const nl = lang === 'ru' ? 'en' : lang === 'en' ? 'uk' : 'ru'; setLang(nl); localStorage.setItem('uk_lang', nl) }
-  const switchTab  = (tb: MainTab) => { setTab(tb); setView('list'); setSelDoc(null); setSelPass(null); setSearch('') }
+  const switchTab  = (tb) => { setTab(tb); setView('list'); setSelDoc(null); setSelPass(null); setSearch('') }
 
   // ── FILTERED DOCS
   const filteredDocs = docs.filter(d => {
@@ -356,7 +356,7 @@ export default function AppContent() {
     setDocs(prev => prev.filter(d => d.id !== id))
     setConfirmDel(null); setSelDoc(null); setView('list')
   }
-  const handleTogglePin = async (doc: Doc) => {
+  const handleTogglePin = async (doc) => {
     await DB.updateDoc(doc.id, { pinned: !doc.pinned })
     const nd = docs.map(d => d.id === doc.id ? { ...d, pinned: !d.pinned } : d)
     setDocs(nd)
@@ -472,7 +472,7 @@ export default function AppContent() {
   }
 
   // ── TODO
-  const handleToggleTodo = async (item: TodoItem) => {
+  const handleToggleTodo = async (item) => {
     if (!user) return
     const nt = todos.map(t => t.id === item.id ? { ...t, done: !t.done } : t)
     setTodos(nt)
@@ -531,28 +531,28 @@ export default function AppContent() {
     reader.readAsDataURL(file)
   }
 
-  const handleDeleteResumeFile = async (fileId: string) => {
+  const handleDeleteResumeFile = async (fileId) => {
     if (!selResume) return
     await DB.deleteResumeFile(fileId)
-    const updated = { ...selResume, resume_files: ((selResume).resume_files ?? []).filter((f: ResumeFile) => f.id !== fileId) }
+    const updated = { ...selResume, resume_files: ((selResume).resume_files ?? []).filter((f) => f.id !== fileId) }
     setSelResume(updated)
     setResumes(prev => prev.map(r => r.id === selResume.id ? updated : r))
   }
 
-  const downloadResumeFile = (file: ResumeFile) => {
+  const downloadResumeFile = (file) => {
     const a = document.createElement('a')
     a.href = file.data_base64
     a.download = file.name
     a.click()
   }
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = (bytes) => {
     if (bytes < 1024) return `${bytes}B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
     return `${(bytes / 1024 / 1024).toFixed(1)}MB`
   }
 
-  const fileIcon = (mime: string) => {
+  const fileIcon = (mime) => {
     if (mime.includes('pdf')) return '📄'
     if (mime.includes('word') || mime.includes('docx') || mime.includes('doc')) return '📝'
     if (mime.includes('text')) return '📃'
@@ -560,13 +560,13 @@ export default function AppContent() {
     return '📎'
   }
 
-  const handleToggleResumePin = async (r: Resume) => {
+  const handleToggleResumePin = async (r) => {
     await DB.updateResume(r.id, { pinned: !r.pinned })
     setResumes(prev => prev.map(x => x.id === r.id ? { ...x, pinned: !x.pinned } : x))
     if (selResume?.id === r.id) setSelResume({ ...r, pinned: !r.pinned })
   }
 
-  const copyResumeToClipboard = (r: Resume) => {
+  const copyResumeToClipboard = (r) => {
     const parts = [
       r.title,
       r.direction ? `Position: ${r.direction}` : '',
@@ -616,7 +616,7 @@ export default function AppContent() {
     setAddresses(prev => prev.filter(a => a.id !== id))
     setConfirmDel(null); setSelAddr(null); setView('list')
   }
-  const handleSetHome = async (addr: Address) => {
+  const handleSetHome = async (addr) => {
     if (!user) return
     await DB.setHomeAddress(user.id, addr.id)
     setAddresses(prev => prev.map(a => ({ ...a, is_home: a.id === addr.id })))
@@ -675,7 +675,7 @@ export default function AppContent() {
     setSaving(false)
   }
 
-  const handleDeleteDocPhoto = async (photoId: string) => {
+  const handleDeleteDocPhoto = async (photoId) => {
     if (!selDoc) return
     await DB.deleteDocPhoto(photoId)
     const updated = { ...selDoc, document_photos: (selDoc.document_photos ?? []).filter(p => p.id !== photoId) }
@@ -705,7 +705,7 @@ export default function AppContent() {
   }
 
   // ── SHARE ADDRESS
-  const shareAddress = (addr: Address, via: 'whatsapp' | 'telegram') => {
+  const shareAddress = (addr, via) => {
     const full = [addr.line1, addr.line2, addr.city, addr.postcode, addr.country].filter(Boolean).join(', ')
     const label = lang !== 'en' && addr.label_ru ? addr.label_ru : addr.label
     const text = encodeURIComponent(`📍 ${label}\n${full}${addr.notes ? '\n' + addr.notes : ''}`)
@@ -714,7 +714,7 @@ export default function AppContent() {
   }
 
   // ── COPY ADDRESS
-  const copyAddress = (addr: Address) => {
+  const copyAddress = (addr) => {
     const full = [addr.line1, addr.line2, addr.city, addr.postcode, addr.country].filter(Boolean).join(', ')
     navigator.clipboard.writeText(full)
   }
@@ -2316,7 +2316,7 @@ export default function AppContent() {
 // ── PIN SCREEN COMPONENT (extracted to avoid SWC JSX parse issues)
 function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLabel }: {
   pinInput: string; pinError: boolean; dark: boolean
-  onKey: (k: string) => void; onRemove: () => void
+  onKey: (k) => void; onRemove: () => void
   label: string; removeLabel: string
 }) {
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
