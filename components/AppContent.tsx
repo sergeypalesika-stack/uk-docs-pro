@@ -28,22 +28,22 @@ const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6
 const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 13px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, outline: 'none', background: C.bg, boxSizing: 'border-box' }
 
 // ── SMALL COMPONENTS
-function ExpiryBadge({ d }: { d: string }) {
+function ExpiryBadge({ d }) {
   const st = getExpiryStatus(d); if (!st) return null
   return <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>{st.label}</span>
 }
-function CopyBtn({ value, lang }: { value: string; lang: Lang }) {
+function CopyBtn({ value, lang }) {
   const [ok, setOk] = useState(false)
   return <button onClick={() => { navigator.clipboard.writeText(value); setOk(true); setTimeout(() => setOk(false), 1800) }} style={{ background: ok ? '#dcfce7' : C.bg, color: ok ? '#166534' : C.blue, border: `1.5px solid ${ok ? '#86efac' : C.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{ok ? '✓' : '⎘'} {ok ? (lang === 'ru' ? 'Скопировано' : 'Copied') : (lang === 'ru' ? 'Копировать' : 'Copy')}</button>
 }
-function FField({ label, children }: { label: string; children: React.ReactNode }) {
+function FField({ label, children }) {
   return <div style={{ marginBottom: 16 }}><div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>{label}</div>{children}</div>
 }
-function DRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 12, marginBottom: 12 }}><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: C.muted, marginBottom: 5 }}>{label}</div><div style={{ fontSize: 14, color: C.text, display: 'flex', alignItems: 'center', flexWrap: 'wrap' as const, gap: 6 }}>{children}</div></div>
+function DRow({ label, children }) {
+  return <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 12, marginBottom: 12 }}><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 5 }}>{label}</div><div style={{ fontSize: 14, color: C.text, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>{children}</div></div>
 }
-function SLabel({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: C.muted, marginBottom: 8 }}>{children}</div>
+function SLabel({ children }) {
+  return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>{children}</div>
 }
 
 // ── MAIN
@@ -807,7 +807,7 @@ export default function AppContent() {
               { icon: '⚠️', val: expiring60.length, en: 'Expiring', ru: 'Истекает', warn: expiring60.length > 0 },
               { icon: '✅', val: `${todoDone}/${todos.length}`, en: 'Tasks', ru: 'Задач' },
             ].map((s, i) => (
-              <div key={i} style={{ background: s.warn ? 'rgba(234,88,12,0.2)' : 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' as const, border: s.warn ? '1px solid rgba(234,88,12,0.4)' : '1px solid rgba(255,255,255,0.08)' }}>
+              <div key={i} style={{ background: s.warn ? 'rgba(234,88,12,0.2)' : 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 10px', textAlign: 'center', border: s.warn ? '1px solid rgba(234,88,12,0.4)' : '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{s.icon} {lang !== 'en' ? s.ru : s.en}</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: s.warn ? '#fb923c' : '#fff' }}>{s.val}</div>
               </div>
@@ -835,7 +835,7 @@ export default function AppContent() {
                   value={globalSearch}
                   onChange={e => setGlobalSearch(e.target.value)}
                   placeholder={t('Search everything…', 'Пошук по всьому…', 'Пошук по всьому…')}
-                  style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: 14, border: 'none', fontSize: 16, background: dark ? '#1e293b' : '#fff', color: D.text, outline: 'none', boxSizing: 'border-box' as const }}
+                  style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: 14, border: 'none', fontSize: 16, background: dark ? '#1e293b' : '#fff', color: D.text, outline: 'none', boxSizing: 'border-box' }}
                 />
                 {globalSearch && <button onClick={() => setGlobalSearch('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: D.muted, fontSize: 20 }}>×</button>}
               </div>
@@ -846,7 +846,7 @@ export default function AppContent() {
                     <div key={r.id + i} onClick={r.action} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: i < Math.min(searchResults.length, 8) - 1 ? `1px solid ${D.border}` : 'none', cursor: 'pointer' }}>
                       <span style={{ fontSize: 22 }}>{r.icon}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: D.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.title}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: D.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
                         {r.sub && <div style={{ fontSize: 12, color: D.muted, fontFamily: r.type === 'doc' ? 'monospace' : 'inherit' }}>{r.sub}</div>}
                       </div>
                       <span style={{ fontSize: 16, color: D.muted }}>›</span>
@@ -855,7 +855,7 @@ export default function AppContent() {
                 </div>
               )}
               {globalSearch.length > 1 && searchResults.length === 0 && (
-                <div style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, padding: '20px', textAlign: 'center' as const, color: D.muted, fontSize: 14 }}>
+                <div style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, padding: '20px', textAlign: 'center', color: D.muted, fontSize: 14 }}>
                   {t('Nothing found', 'Нічого не знайдено', 'Нічого не знайдено')}
                 </div>
               )}
@@ -983,7 +983,7 @@ export default function AppContent() {
               {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 18 }}>×</button>}
             </div>
 
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10, marginBottom: 14, scrollbarWidth: 'none' as const }}>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10, marginBottom: 14, scrollbarWidth: 'none' }}>
               {[{ id: 'all', label: 'All', labelRu: 'Все', icon: '📂', color: C.navy }, ...CATEGORIES].map(c => (
                 <button key={c.id} onClick={() => setFilterCat(c.id)} style={{ flexShrink: 0, background: filterCat === c.id ? c.color : C.surface, color: filterCat === c.id ? '#fff' : C.textSub, border: `1.5px solid ${filterCat === c.id ? c.color : C.border}`, borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                   {c.icon} {lang !== 'en' ? c.labelRu : c.label}
@@ -1044,7 +1044,7 @@ export default function AppContent() {
                         onClick={() => setPhotoView(ph.data_url)}
                         style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 10, cursor: 'pointer', border: `1px solid ${C.border}` }}
                       />
-                      <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{ph.label}</div>
+                      <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ph.label}</div>
                       <button
                         onClick={() => handleDeleteDocPhoto(ph.id)}
                         style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 99, width: 26, height: 26, color: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
@@ -1075,13 +1075,13 @@ export default function AppContent() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <button
                       onClick={() => docCameraRef.current?.click()}
-                      style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                      style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>📷</span>
                       <span>{t('Camera', 'Камера', 'Камера')}</span>
                     </button>
                     <button
                       onClick={() => docPhotoRef.current?.click()}
-                      style={{ background: '#eff6ff', color: C.blue, border: `1.5px solid #93c5fd`, borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                      style={{ background: '#eff6ff', color: C.blue, border: `1.5px solid #93c5fd`, borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>🖼️</span>
                       <span>{t('Gallery', 'Галерея', 'Галерея')}</span>
                     </button>
@@ -1090,7 +1090,7 @@ export default function AppContent() {
               </div>
             </div>
 
-            {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
+            {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' }}>
               <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this document?', 'Удалить этот документ?')}</div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
@@ -1106,7 +1106,7 @@ export default function AppContent() {
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>➕ {t('New Document', 'Новий документ', 'Новий документ')}</div>
             <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
+                {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
               </div>
             </FField>
             <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. CSCS Green Card" style={inputStyle} /></FField>
@@ -1116,8 +1116,8 @@ export default function AppContent() {
               <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
               <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
-            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
               <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pin this document', 'Закрепить')}</span>
@@ -1135,7 +1135,7 @@ export default function AppContent() {
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Document', 'Редагувати документ', 'Редагувати документ')}</div>
             <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
+                {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
               </div>
             </FField>
             <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></FField>
@@ -1145,8 +1145,8 @@ export default function AppContent() {
               <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
               <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
-            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
               <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pinned', 'Закреплён')}</span>
@@ -1204,7 +1204,7 @@ export default function AppContent() {
               <FField label={t('Issued', 'Дата видачі', 'Дата видачі')}><input type="date" value={passForm.issued_date} onChange={e => setPassForm(f => ({ ...f, issued_date: e.target.value }))} style={inputStyle} /></FField>
               <FField label={t('Expires', 'Термін дії', 'Термін дії')}><input type="date" value={passForm.expiry_date} onChange={e => setPassForm(f => ({ ...f, expiry_date: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={passForm.notes} onChange={e => setPassForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={passForm.notes} onChange={e => setPassForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => switchTab('passport')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleAddPassport} disabled={!passForm.number || saving} style={{ flex: 2, background: passForm.number ? '#0369a1' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: passForm.number ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{saving ? '⏳' : t('Save', 'Зберегти', 'Зберегти')}</button>
@@ -1256,11 +1256,11 @@ export default function AppContent() {
                   <div style={{ textAlign: 'center', padding: '12px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <button onClick={() => passCameraRef.current?.click()} style={{ background: '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => passCameraRef.current?.click()} style={{ background: '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>📷</span>
                       <span>{t('Camera', 'Камера', 'Камера')}</span>
                     </button>
-                    <button onClick={() => passPhotoRef.current?.click()} style={{ background: '#e0f2fe', color: '#0369a1', border: '1.5px solid #7dd3fc', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => passPhotoRef.current?.click()} style={{ background: '#e0f2fe', color: '#0369a1', border: '1.5px solid #7dd3fc', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>🖼️</span>
                       <span>{t('Gallery', 'Галерея', 'Галерея')}</span>
                     </button>
@@ -1271,7 +1271,7 @@ export default function AppContent() {
 
             <button onClick={() => setConfirmDel(selPass.id)} style={{ width: '100%', background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑 {t('Delete Passport', 'Видалити паспорт', 'Видалити паспорт')}</button>
             {confirmDel === selPass.id && (
-              <div style={{ background: '#fee2e2', borderRadius: 12, padding: 16, marginTop: 10, textAlign: 'center' as const }}>
+              <div style={{ background: '#fee2e2', borderRadius: 12, padding: 16, marginTop: 10, textAlign: 'center' }}>
                 <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 12 }}>{t('Delete this passport?', 'Удалить этот паспорт?')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
@@ -1293,7 +1293,7 @@ export default function AppContent() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                   <span style={{ fontSize: 28 }}>🏠</span>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, opacity: 0.7 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.7 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>
                     <div style={{ fontSize: 16, fontWeight: 700 }}>{lang !== 'en' && homeAddr.label_ru ? homeAddr.label_ru : homeAddr.label}</div>
                   </div>
                 </div>
@@ -1316,7 +1316,7 @@ export default function AppContent() {
                 </div>
               </div>
             ) : (
-              <div style={{ background: C.surface, borderRadius: 16, padding: '20px 18px', marginBottom: 14, border: `2px dashed ${C.border}`, textAlign: 'center' as const }}>
+              <div style={{ background: C.surface, borderRadius: 16, padding: '20px 18px', marginBottom: 14, border: `2px dashed ${C.border}`, textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: C.navy, marginBottom: 4 }}>{t('No home address set', 'Адрес прописки не добавлен')}</div>
                 <div style={{ fontSize: 12, color: C.muted }}>{t('Add an address and mark it as home', 'Добавь адрес и отметь его как главный')}</div>
@@ -1334,7 +1334,7 @@ export default function AppContent() {
                       <div style={{ width: 40, height: 40, borderRadius: 10, background: addr.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📍</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: C.navy }}>{lang !== 'en' && addr.label_ru ? addr.label_ru : addr.label}</div>
-                        <div style={{ fontSize: 12, color: C.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                        <div style={{ fontSize: 12, color: C.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {[addr.line1, addr.city, addr.postcode].filter(Boolean).join(', ')}
                         </div>
                       </div>
@@ -1370,7 +1370,7 @@ export default function AppContent() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 32 }}>{selAddr.is_home ? '🏠' : '📍'}</span>
                 <div>
-                  {selAddr.is_home && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, opacity: 0.7, marginBottom: 2 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>}
+                  {selAddr.is_home && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 2 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>}
                   <div style={{ fontSize: 20, fontWeight: 700 }}>{lang !== 'en' && selAddr.label_ru ? selAddr.label_ru : selAddr.label}</div>
                 </div>
               </div>
@@ -1399,11 +1399,11 @@ export default function AppContent() {
             <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>📤 {t('Share Address', 'Поділитися адресою', 'Поділитися адресою')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <button onClick={() => shareAddress(selAddr, 'whatsapp')} style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                <button onClick={() => shareAddress(selAddr, 'whatsapp')} style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 28 }}>💬</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>WhatsApp</span>
                 </button>
-                <button onClick={() => shareAddress(selAddr, 'telegram')} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
+                <button onClick={() => shareAddress(selAddr, 'telegram')} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 28 }}>✈️</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Telegram</span>
                 </button>
@@ -1426,7 +1426,7 @@ export default function AppContent() {
             </div>
 
             {confirmDel === selAddr.id && (
-              <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
+              <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' }}>
                 <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this address?', 'Удалить этот адрес?')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
@@ -1444,7 +1444,7 @@ export default function AppContent() {
 
             {/* Color picker */}
             <FField label={t('Colour', 'Колір', 'Колір')}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ADDR_COLORS.map(col => (
                   <button key={col} onClick={() => setAddrForm(f => ({ ...f, color: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, border: addrForm.color === col ? '3px solid #1a202c' : '2px solid transparent', cursor: 'pointer', boxShadow: addrForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
                 ))}
@@ -1457,10 +1457,10 @@ export default function AppContent() {
             <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} placeholder={t('Flat, area (optional)', 'Квартира, район (необязательно)')} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('City', 'Місто', 'Місто')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} placeholder="Oxford" style={inputStyle} /></FField>
-              <FField label={t('Postcode', 'Почтовый индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' as const }} /></FField>
+              <FField label={t('Postcode', 'Почтовый индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
             </div>
             <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} placeholder="United Kingdom" style={inputStyle} /></FField>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('e.g. near bus stop, ring bell 2', 'напр. возле остановки, звонок 2')} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('e.g. near bus stop, ring bell 2', 'напр. возле остановки, звонок 2')} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
 
             {/* Home toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
@@ -1486,7 +1486,7 @@ export default function AppContent() {
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Address', 'Редагувати адресу', 'Редагувати адресу')}</div>
             <FField label={t('Colour', 'Колір', 'Колір')}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ADDR_COLORS.map(col => (
                   <button key={col} onClick={() => setAddrForm(f => ({ ...f, color: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, border: addrForm.color === col ? '3px solid #1a202c' : '2px solid transparent', cursor: 'pointer', boxShadow: addrForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
                 ))}
@@ -1498,10 +1498,10 @@ export default function AppContent() {
             <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('City', 'Місто', 'Місто')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} style={inputStyle} /></FField>
-              <FField label={t('Postcode', 'Индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' as const }} /></FField>
+              <FField label={t('Postcode', 'Индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
             </div>
             <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' as const }} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
               onClick={() => setAddrForm(f => ({ ...f, is_home: !f.is_home }))}>
               <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
@@ -1542,7 +1542,7 @@ export default function AppContent() {
                     { label: t('Ready', 'Готові', 'Готові'), val: resumes.filter(r=>r.status==='ready').length, color: '#2e7d32' },
                     { label: t('Sent', 'Надіслані', 'Надіслані'), val: resumes.filter(r=>r.status==='sent'||r.status==='interview').length, color: '#1d4ed8' },
                   ].map((s,i) => (
-                    <div key={i} style={{ background: C.surface, borderRadius: 12, padding: '10px 8px', textAlign: 'center' as const, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                    <div key={i} style={{ background: C.surface, borderRadius: 12, padding: '10px 8px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                       <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
                       <div style={{ fontSize: 11, color: C.muted }}>{s.label}</div>
                     </div>
@@ -1565,7 +1565,7 @@ export default function AppContent() {
                           📝
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
                             {r.pinned && <span style={{ fontSize: 11 }}>📌</span>}
                             <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{r.title}</span>
                             <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
@@ -1625,12 +1625,12 @@ export default function AppContent() {
               <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12 }}>
                 {selResume.summary && (
                   <DRow label={t('About me', 'Про мене', 'Про мене')}>
-                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' as const }}>{selResume.summary}</span>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{selResume.summary}</span>
                   </DRow>
                 )}
                 {selResume.skills && (
                   <DRow label={t('Key Skills', 'Ключові навички', 'Ключові навички')}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {selResume.skills.split(/[,;\n]+/).filter(Boolean).map((sk, i) => (
                         <span key={i} style={{ background: selResume.color + '18', color: selResume.color,
                           fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
@@ -1642,12 +1642,12 @@ export default function AppContent() {
                 )}
                 {selResume.experience && (
                   <DRow label={t('Experience', 'Досвід роботи', 'Досвід роботи')}>
-                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.8, whiteSpace: 'pre-wrap' as const }}>{selResume.experience}</span>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{selResume.experience}</span>
                   </DRow>
                 )}
                 {selResume.education && (
                   <DRow label={t('Education', 'Освіта', 'Освіта')}>
-                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' as const }}>{selResume.education}</span>
+                    <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{selResume.education}</span>
                   </DRow>
                 )}
                 {selResume.notes && (
@@ -1695,7 +1695,7 @@ export default function AppContent() {
                       <div key={rf.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: C.bg, borderRadius: 12, marginBottom: 8 }}>
                         <span style={{ fontSize: 28, flexShrink: 0 }}>{fileIcon(rf.mime_type)}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{rf.name}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rf.name}</div>
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{formatFileSize(rf.size_bytes)} · {formatDate(rf.added_at)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -1719,7 +1719,7 @@ export default function AppContent() {
                     📎 {t('Attach File (PDF, Word, etc.)', 'Прикріпити файл (PDF, Word…)', 'Прикріпити файл (PDF, Word…)')}
                   </button>
                 )}
-                <div style={{ fontSize: 11, color: C.muted, textAlign: 'center' as const, marginTop: 8 }}>
+                <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginTop: 8 }}>
                   {t('Max 5MB · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT')}
                 </div>
               </div>
@@ -1740,7 +1740,7 @@ export default function AppContent() {
               </div>
 
               {confirmDel === selResume.id && (
-                <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' as const }}>
+                <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' }}>
                   <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>
                     {t('Delete this CV?', 'Видалити це CV?', 'Видалити це CV?')}
                   </div>
@@ -1763,7 +1763,7 @@ export default function AppContent() {
 
             {/* Color picker */}
             <FField label={t('Colour', 'Колір', 'Колір')}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {RESUME_COLORS.map(col => (
                   <button key={col} onClick={() => setResumeForm(f => ({ ...f, color: col }))}
                     style={{ width: 34, height: 34, borderRadius: 8, background: col, cursor: 'pointer',
@@ -1791,7 +1791,7 @@ export default function AppContent() {
             </div>
 
             <FField label={t('Status', 'Статус', 'Статус')}>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {RESUME_STATUSES.map(s => (
                   <button key={s.id} onClick={() => setResumeForm(f=>({...f,status:s.id['status']}))}
                     style={{ background: resumeForm.status===s.id ? s.color : C.bg,
@@ -1807,31 +1807,31 @@ export default function AppContent() {
             <FField label={t('About me / Summary', 'Про мене / Резюме', 'Про мене / Резюме')}>
               <textarea value={resumeForm.summary} onChange={e => setResumeForm(f=>({...f,summary:e.target.value}))}
                 rows={4} placeholder={t('Brief professional summary…', 'Короткий професійний опис…', 'Короткий професійний опис…')}
-                style={{ ...inputStyle, resize: 'vertical' as const }} />
+                style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
             <FField label={t('Key Skills (comma separated)', 'Ключові навички (через кому)', 'Ключові навички (через кому)')}>
               <textarea value={resumeForm.skills} onChange={e => setResumeForm(f=>({...f,skills:e.target.value}))}
                 rows={3} placeholder="F-Gas certified, CSCS Green Card, HVAC installation, Air conditioning…"
-                style={{ ...inputStyle, resize: 'vertical' as const }} />
+                style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
             <FField label={t('Work Experience', 'Досвід роботи', 'Досвід роботи')}>
               <textarea value={resumeForm.experience} onChange={e => setResumeForm(f=>({...f,experience:e.target.value}))}
                 rows={6} placeholder={t('Job title — Company — Dates\nKey achievements…', 'Посада — Компанія — Дати\nОсновні досягнення…', 'Посада — Компанія — Дати\nОсновні досягнення…')}
-                style={{ ...inputStyle, resize: 'vertical' as const }} />
+                style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
             <FField label={t('Education & Qualifications', 'Освіта та кваліфікації', 'Освіта та кваліфікації')}>
               <textarea value={resumeForm.education} onChange={e => setResumeForm(f=>({...f,education:e.target.value}))}
                 rows={4} placeholder={t('Degree / Cert — Institution — Year…', 'Ступінь / Серт — Заклад — Рік…', 'Ступінь / Серт — Заклад — Рік…')}
-                style={{ ...inputStyle, resize: 'vertical' as const }} />
+                style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
             <FField label={t('Notes (private)', 'Нотатки (приватні)', 'Нотатки (приватні)')}>
               <textarea value={resumeForm.notes} onChange={e => setResumeForm(f=>({...f,notes:e.target.value}))}
                 rows={2} placeholder={t('Personal notes about this application…', 'Особисті нотатки про цю заявку…', 'Особисті нотатки про цю заявку…')}
-                style={{ ...inputStyle, resize: 'vertical' as const }} />
+                style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer',
@@ -1894,7 +1894,7 @@ export default function AppContent() {
               return (
                 <div key={w} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: C.blue }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.blue }}>
                       {lang !== 'en' ? wL[w]?.ru : wL[w]?.en}
                     </div>
                     <span style={{ fontSize: 11, color: C.muted }}>{doneH}/{items.length}</span>
@@ -1970,7 +1970,7 @@ export default function AppContent() {
             <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2 }}>
+                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <span style={{ fontSize: 18 }}>{c.icon}</span>
                     <span>{lang !== 'en' ? c.labelRu : c.label}</span>
                   </button>
@@ -2005,7 +2005,7 @@ export default function AppContent() {
             <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2 }}>
+                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <span style={{ fontSize: 18 }}>{c.icon}</span>
                     <span>{lang !== 'en' ? c.labelRu : c.label}</span>
                   </button>
@@ -2028,7 +2028,7 @@ export default function AppContent() {
             <SLabel>🆘 {t('Emergency Contacts', 'Екстрені контакти', 'Екстрені контакти')}</SLabel>
 
             {contacts.length === 0 ? (
-              <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 12, padding: '16px 18px', marginBottom: 14, textAlign: 'center' as const, color: D.muted, fontSize: 13 }}>
+              <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 12, padding: '16px 18px', marginBottom: 14, textAlign: 'center', color: D.muted, fontSize: 13 }}>
                 {t('No contacts added yet', 'Контактів ще немає', 'Контактів ще немає')}
               </div>
             ) : (
@@ -2091,7 +2091,7 @@ export default function AppContent() {
             {/* Add medical record form */}
             <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>+ {t('Add Health Record','Додати медичний запис','Додати медичний запис')}</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                 {[
                   {id:'gp', en:'GP Doctor', uk:'Лікар GP'},
                   {id:'nhs', en:'NHS Number', uk:'NHS номер'},
@@ -2107,7 +2107,7 @@ export default function AppContent() {
               </div>
               <input value={medForm.title} onChange={e=>setMedForm(f=>({...f,title:e.target.value}))} placeholder={t('Title (e.g. Dr Smith, NHS Number…)','Назва (напр. Лікар Сміт, NHS номер…)','Назва (напр. Лікар Сміт, NHS номер…)')} style={{...inputStyle, marginBottom: 8, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
               <input value={medForm.value} onChange={e=>setMedForm(f=>({...f,value:e.target.value}))} placeholder={t('Value / Number / Phone','Значення / Номер / Телефон','Значення / Номер / Телефон')} style={{...inputStyle, marginBottom: 8, fontFamily: 'monospace', background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
-              <textarea value={medForm.notes} onChange={e=>setMedForm(f=>({...f,notes:e.target.value}))} rows={2} placeholder={t('Notes…','Нотатки…','Нотатки…')} style={{...inputStyle, marginBottom: 8, resize: 'vertical' as const, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
+              <textarea value={medForm.notes} onChange={e=>setMedForm(f=>({...f,notes:e.target.value}))} rows={2} placeholder={t('Notes…','Нотатки…','Нотатки…')} style={{...inputStyle, marginBottom: 8, resize: 'vertical', background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
               <button onClick={handleAddMedical} disabled={!medForm.title||saving} style={{ width: '100%', background: medForm.title ? '#0369a1' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
                 {saving ? '⏳' : `+ ${t('Save Record','Зберегти запис','Зберегти запис')}`}
               </button>
@@ -2117,13 +2117,13 @@ export default function AppContent() {
 
         {tab === 'profile' && view === 'list' && (
           <>
-            <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, borderRadius: 20, padding: '28px 24px 24px', marginBottom: 12, color: '#fff', textAlign: 'center' as const }}>
+            <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, borderRadius: 20, padding: '28px 24px 24px', marginBottom: 12, color: '#fff', textAlign: 'center' }}>
               <div style={{ fontSize: 60, marginBottom: 10 }}>{profile?.avatar || '👤'}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{profile?.name || user?.email?.split('@')[0]}</div>
               {profile?.name_ru && <div style={{ fontSize: 14, opacity: 0.6, marginTop: 2 }}>{profile.name_ru}</div>}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 14 }}>
-                {profile?.dob && <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('DOB', 'Дата народження', 'Дата народження')}</div><div style={{ fontWeight: 600, fontSize: 14 }}>{formatDate(profile.dob)}</div></div>}
-                {profile?.nationality && <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('Nationality', 'Громадянство', 'Громадянство')}</div><div style={{ fontWeight: 600, fontSize: 14 }}>{profile.nationality}</div></div>}
+                {profile?.dob && <div style={{ textAlign: 'center' }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('DOB', 'Дата народження', 'Дата народження')}</div><div style={{ fontWeight: 600, fontSize: 14 }}>{formatDate(profile.dob)}</div></div>}
+                {profile?.nationality && <div style={{ textAlign: 'center' }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('Nationality', 'Громадянство', 'Громадянство')}</div><div style={{ fontWeight: 600, fontSize: 14 }}>{profile.nationality}</div></div>}
               </div>
               <div style={{ marginTop: 12, fontSize: 12, opacity: 0.4 }}>{user?.email}</div>
             </div>
@@ -2135,7 +2135,7 @@ export default function AppContent() {
 
             {/* Settings row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <button onClick={toggleTheme} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+              <button onClick={toggleTheme} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>{dark ? '☀️' : '🌙'}</span>
                 <span>{dark ? t('Light','Світла','Світла') : t('Dark','Темна','Темна')}</span>
               </button>
@@ -2145,11 +2145,11 @@ export default function AppContent() {
                 if (pin === '') { removePin(); alert(t('PIN removed','PIN видалено','PIN видалено')) }
                 else if (pin.length === 4 && /^\d{4}$/.test(pin)) { setPin(pin); alert(t('PIN set!','PIN встановлено!','PIN встановлено!')) }
                 else alert(t('PIN must be 4 digits','PIN має бути 4 цифри','PIN має бути 4 цифри'))
-              }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+              }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>🔐</span>
                 <span>PIN</span>
               </button>
-              <button onClick={() => switchTab('medical')} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+              <button onClick={() => switchTab('medical')} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>🏥</span>
                 <span>{t('Health','Здоровʼя','Здоровʼя')}</span>
               </button>
@@ -2196,7 +2196,7 @@ export default function AppContent() {
                   { icon: '📍', count: addresses.length,  label: t('Addresses','Адреси','Адреси') },
                   { icon: '✅', count: todos.filter(t=>t.done).length + '/' + todos.length, label: t('Tasks','Завдання','Завдання') },
                 ].map((s,i) => (
-                  <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' as const }}>
+                  <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
                     <div style={{ fontSize: 20 }}>{s.icon}</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: C.navy }}>{s.count}</div>
                     <div style={{ fontSize: 10, color: C.muted }}>{s.label}</div>
@@ -2231,7 +2231,7 @@ export default function AppContent() {
                 <button key={i} onClick={btn.action} style={{
                   width: '100%', background: btn.bg, border: `1.5px solid ${btn.border}`,
                   borderRadius: 14, padding: '16px 18px', cursor: 'pointer', marginBottom: 10,
-                  display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' as const,
+                  display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
                 }}>
                   <span style={{ fontSize: 32, flexShrink: 0 }}>{btn.icon}</span>
                   <div>
@@ -2259,7 +2259,7 @@ export default function AppContent() {
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Profile', 'Редагувати профіль', 'Редагувати профіль')}</div>
             <FField label={t('Avatar', 'Аватар', 'Аватар')}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {AVATARS.map(a => <button key={a} onClick={() => setProfForm(f => ({ ...f, avatar: a }))} style={{ width: 44, height: 44, borderRadius: 10, fontSize: 24, border: `2px solid ${profForm.avatar === a ? C.navy : C.border}`, background: profForm.avatar === a ? C.bg : 'transparent', cursor: 'pointer' }}>{a}</button>)}
               </div>
             </FField>
@@ -2281,8 +2281,7 @@ export default function AppContent() {
       </div>
       {/* ══ BOTTOM TAB BAR ══ */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: dark ? '#1e293b' : '#fff', borderTop: `1px solid ${D.border}`, boxShadow: '0 -4px 20px rgba(0,0,0,0.15)', zIndex: 90, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {([
-  <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+        <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="docs"    icon="📂" en="Docs"    ru="Доки"    uk="Доки"      tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="resume"  icon="📝" en="CV"      ru="CV"      uk="CV"        tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="medical" icon="🏥" en="Health"  ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
@@ -2309,11 +2308,7 @@ function NavBtn({ id, icon, en, ru, uk, tab, dark, lang, switchTab }) {
 }
 
 // ── PIN SCREEN COMPONENT (extracted to avoid SWC JSX parse issues)
-function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLabel }: {
-  pinInput: string; pinError: boolean; dark: boolean
-  onKey: (k) => void; onRemove: () => void
-  label: string; removeLabel: string
-}) {
+function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLabel }) {
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
   return (
     <div style={{ minHeight: '100vh', background: dark ? '#0f172a' : '#0f1f3d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
@@ -2344,15 +2339,15 @@ function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLab
   )
 }
 
-function DocCard({ doc, cat, lang, onOpen }: { doc: Doc; cat: { icon: string; color: string }; lang: Lang; onOpen: () => void }) {
+function DocCard({ doc, cat, lang, onOpen, dark }) => void }) {
   const title = lang === 'ru' && doc.title_ru ? doc.title_ru : doc.title
   return (
     <div onClick={onOpen} style={{ background: '#fff', borderRadius: 14, marginBottom: 8, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${cat.color}` }}>
       <div style={{ width: 44, height: 44, borderRadius: 12, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{cat.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a202c', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a202c', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           {doc.pinned && <span style={{ fontSize: 10 }}>📌</span>}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{title}</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
           {doc.valid_until && <ExpiryBadge d={doc.valid_until} />}
         </div>
         {doc.number && <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#4a5568', fontWeight: 600, letterSpacing: '0.04em' }}>{doc.number}</div>}
