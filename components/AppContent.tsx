@@ -2339,7 +2339,7 @@ function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLab
   )
 }
 
-function DocCard({ doc, cat, lang, onOpen, dark }) => void }) {
+function DocCard({ doc, cat, lang, onOpen, dark }) {
   const title = lang === 'ru' && doc.title_ru ? doc.title_ru : doc.title
   return (
     <div onClick={onOpen} style={{ background: '#fff', borderRadius: 14, marginBottom: 8, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${cat.color}` }}>
