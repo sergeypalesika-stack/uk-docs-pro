@@ -110,12 +110,12 @@ export default function AppContent() {
     navy: '#e2e8f0', navyM: '#cbd5e1', blue: '#60a5fa', accent: '#3b82f6',
     surface: '#1e293b', bg: '#0f172a', border: '#334155',
     muted: '#64748b', text: '#f1f5f9', textSub: '#94a3b8',
-    red: '#f87171', green: '#4ade80',
+    red: '#f87171', green: '#4ade80'
   } : {
     navy: C.navy, navyM: C.navyM, blue: C.blue, accent: C.accent,
     surface: C.surface, bg: C.bg, border: C.border,
     muted: C.muted, text: C.text, textSub: C.textSub,
-    red: C.red, green: C.green,
+    red: C.red, green: C.green
   }
 
   const toggleTheme = () => {
@@ -169,7 +169,7 @@ export default function AppContent() {
     ...docs.filter(d => d.title.toLowerCase().includes(gq) || (d.title_ru ?? '').toLowerCase().includes(gq) || (d.number ?? '').toLowerCase().includes(gq)).map(d => ({ type: 'doc', icon: '📄', title: d.title, sub: d.number ?? '', id: d.id, action: () => { setTab('docs'); setSelDoc(d); setView('detail'); setShowSearch(false); setGlobalSearch('') } })),
     ...passports.filter(p => p.type.toLowerCase().includes(gq) || p.number.toLowerCase().includes(gq)).map(p => ({ type: 'pass', icon: '📘', title: p.type, sub: p.number, id: p.id, action: () => { setTab('passport'); setSelPass(p); setView('passportDetail'); setShowSearch(false); setGlobalSearch('') } })),
     ...addresses.filter(a => a.label.toLowerCase().includes(gq) || a.city.toLowerCase().includes(gq)).map(a => ({ type: 'addr', icon: '📍', title: a.label, sub: [a.city, a.postcode].filter(Boolean).join(', '), id: a.id, action: () => { setTab('address'); setSelAddr(a); setView('detail'); setShowSearch(false); setGlobalSearch('') } })),
-    ...resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).map(r => ({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r as any); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } })),
+    ...resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).map(r => ({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } })),
     ...todos.filter(t => t.text.toLowerCase().includes(gq) || t.textRu.toLowerCase().includes(gq)).map(t => ({ type: 'todo', icon: t.done ? '✅' : '⬜', title: t.text, sub: '', id: t.id, action: () => { setTab('todo'); setShowSearch(false); setGlobalSearch('') } })),
   ] : []
   const cat = (id) => CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]
@@ -347,7 +347,7 @@ export default function AppContent() {
     if (!user || !docForm.title) return
     setSaving(true)
     const nd = await DB.addDoc(user.id, { ...docForm, valid_from: docForm.valid_from || null, valid_until: docForm.valid_until || null })
-    if (nd) setDocs(prev => [nd as Doc, ...prev])
+    if (nd) setDocs(prev => [nd, ...prev])
     setDocForm({ category: 'immigration', title: '', title_ru: '', number: '', valid_from: '', valid_until: '', notes: '', notes_ru: '', pinned: false })
     switchTab('docs'); setSaving(false)
   }
@@ -385,7 +385,7 @@ export default function AppContent() {
     if (!user || !passForm.number) return
     setSaving(true)
     const np = await DB.addPassport(user.id, { ...passForm, issued_date: passForm.issued_date || null, expiry_date: passForm.expiry_date || null })
-    if (np) setPassports(prev => [{ ...(np as Passport), passport_photos: [] }, ...prev])
+    if (np) setPassports(prev => [{ ...(np), passport_photos: [] }, ...prev])
     setPassForm({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
     switchTab('passport'); setSaving(false)
   }
@@ -401,7 +401,7 @@ export default function AppContent() {
       // Fallback: raw base64 if canvas fails
       const fallback = () => {
         const r = new FileReader()
-        r.onload = e => resolve(e.target?.result as string ?? '')
+        r.onload = e => resolve(e.target?.result ?? '')
         r.onerror = () => resolve('')
         r.readAsDataURL(file)
       }
@@ -452,7 +452,7 @@ export default function AppContent() {
       const ph = await DB.addPassportPhoto(selPass.id, user.id, label, dataUrl)
       if (ph) {
         const updated = passports.map(p => p.id === selPass.id
-          ? { ...p, passport_photos: [...p.passport_photos, ph as PassportPhoto] }
+          ? { ...p, passport_photos: [...p.passport_photos, ph] }
           : p)
         setPassports(updated)
         setSelPass(updated.find(p => p.id === selPass.id) ?? null)
@@ -518,12 +518,12 @@ export default function AppContent() {
     setFileUploading(true)
     const reader = new FileReader()
     reader.onload = async e => {
-      const base64 = (e.target?.result as string) ?? ''
+      const base64 = (e.target?.result) ?? ''
       const rf = await DB.addResumeFile(selResume.id, user.id, file.name, file.type, file.size, base64)
       if (rf) {
-        const updated = { ...selResume, resume_files: [...(selResume as any).resume_files ?? [], rf] }
-        setSelResume(updated as any)
-        setResumes(prev => prev.map(r => r.id === selResume.id ? { ...r, resume_files: [...(r as any).resume_files ?? [], rf] } : r) as any)
+        const updated = { ...selResume, resume_files: [...(selResume).resume_files ?? [], rf] }
+        setSelResume(updated)
+        setResumes(prev => prev.map(r => r.id === selResume.id ? { ...r, resume_files: [...(r).resume_files ?? [], rf] } : r))
       }
       setFileUploading(false)
     }
@@ -534,9 +534,9 @@ export default function AppContent() {
   const handleDeleteResumeFile = async (fileId: string) => {
     if (!selResume) return
     await DB.deleteResumeFile(fileId)
-    const updated = { ...selResume, resume_files: ((selResume as any).resume_files ?? []).filter((f: ResumeFile) => f.id !== fileId) }
-    setSelResume(updated as any)
-    setResumes(prev => prev.map(r => r.id === selResume.id ? updated : r) as any)
+    const updated = { ...selResume, resume_files: ((selResume).resume_files ?? []).filter((f: ResumeFile) => f.id !== fileId) }
+    setSelResume(updated)
+    setResumes(prev => prev.map(r => r.id === selResume.id ? updated : r))
   }
 
   const downloadResumeFile = (file: ResumeFile) => {
@@ -909,10 +909,10 @@ export default function AppContent() {
             {/* Quick stats grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               {[
-                { icon: '📂', label: t('Documents','Документи','Документи'), val: docs.length, color: C.navy, tab: 'docs' as MainTab },
-                { icon: '📘', label: t('Passports','Паспорти','Паспорти'), val: passports.length, color: '#0369a1', tab: 'passport' as MainTab },
-                { icon: '📍', label: t('Addresses','Адреси','Адреси'), val: addresses.length, color: '#2e7d32', tab: 'address' as MainTab },
-                { icon: '📝', label: 'CV', val: resumes.length, color: '#1a4480', tab: 'resume' as MainTab },
+                { icon: '📂', label: t('Documents','Документи','Документи'), val: docs.length, color: C.navy, tab: 'docs' },
+                { icon: '📘', label: t('Passports','Паспорти','Паспорти'), val: passports.length, color: '#0369a1', tab: 'passport' },
+                { icon: '📍', label: t('Addresses','Адреси','Адреси'), val: addresses.length, color: '#2e7d32', tab: 'address' },
+                { icon: '📝', label: 'CV', val: resumes.length, color: '#1a4480', tab: 'resume' },
               ].map((s, i) => (
                 <div key={i} onClick={() => switchTab(s.tab)} style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 14px', cursor: 'pointer', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', borderLeft: `4px solid ${s.color}` }}>
                   <div style={{ fontSize: 26, marginBottom: 6 }}>{s.icon}</div>
@@ -1580,8 +1580,8 @@ export default function AppContent() {
                           {r.company && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>🏢 {r.company}</div>}
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 4, display: 'flex', gap: 10 }}>
                             <span>{t('Updated', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)}</span>
-                            {((r as any).resume_files?.length ?? 0) > 0 && (
-                              <span>📎 {(r as any).resume_files.length}</span>
+                            {((r).resume_files?.length ?? 0) > 0 && (
+                              <span>📎 {(r).resume_files.length}</span>
                             )}
                           </div>
                         </div>
@@ -1689,13 +1689,13 @@ export default function AppContent() {
               {/* ── ATTACHED FILES ── */}
               <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>📎 {t('Attached Files', 'Прикріплені файли', 'Прикріплені файли')} <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{((selResume as any).resume_files ?? []).length}</span></span>
+                  <span>📎 {t('Attached Files', 'Прикріплені файли', 'Прикріплені файли')} <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{((selResume).resume_files ?? []).length}</span></span>
                 </div>
 
                 {/* Files list */}
-                {((selResume as any).resume_files ?? []).length > 0 && (
+                {((selResume).resume_files ?? []).length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    {((selResume as any).resume_files ?? []).map((rf: any) => (
+                    {((selResume).resume_files ?? []).map((rf: any) => (
                       <div key={rf.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: C.bg, borderRadius: 12, marginBottom: 8 }}>
                         <span style={{ fontSize: 28, flexShrink: 0 }}>{fileIcon(rf.mime_type)}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1797,7 +1797,7 @@ export default function AppContent() {
             <FField label={t('Status', 'Статус', 'Статус')}>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
                 {RESUME_STATUSES.map(s => (
-                  <button key={s.id} onClick={() => setResumeForm(f=>({...f,status:s.id as Resume['status']}))}
+                  <button key={s.id} onClick={() => setResumeForm(f=>({...f,status:s.id['status']}))}
                     style={{ background: resumeForm.status===s.id ? s.color : C.bg,
                       color: resumeForm.status===s.id ? '#fff' : C.textSub,
                       border: `1.5px solid ${resumeForm.status===s.id ? s.color : C.border}`,
