@@ -46,20 +46,20 @@ function SLabel({ children }: { children: React.ReactNode }) {
 
 // ── MAIN
 export default function Page() {
-  const [user,      setUser]      = useState<User | null>(null)
-  const [profile,   setProfile]   = useState<Profile | null>(null)
-  const [docs,      setDocs]      = useState<Doc[]>([])
-  const [passports, setPassports] = useState<Passport[]>([])
-  const [todos,     setTodos]     = useState<TodoItem[]>(DEFAULT_TODOS)
-  const [lang,      setLang]      = useState<Lang>('ru')
-  const [tab,       setTab]       = useState<MainTab>('docs')
-  const [view,      setView]      = useState<View>('list')
-  const [selDoc,    setSelDoc]    = useState<Doc | null>(null)
-  const [selPass,   setSelPass]   = useState<Passport | null>(null)
-  const [addresses, setAddresses] = useState<Address[]>([])
-  const [selAddr,   setSelAddr]   = useState<Address | null>(null)
-  const [resumes,   setResumes]   = useState<Resume[]>([])
-  const [selResume, setSelResume] = useState<Resume | null>(null)
+  const [user,      setUser]      = useState(null)
+  const [profile,   setProfile]   = useState(null)
+  const [docs,      setDocs]      = useState([])
+  const [passports, setPassports] = useState([])
+  const [todos,     setTodos]     = useState(DEFAULT_TODOS)
+  const [lang,      setLang]      = useState('ru')
+  const [tab,       setTab]       = useState('docs')
+  const [view,      setView]      = useState('list')
+  const [selDoc,    setSelDoc]    = useState(null)
+  const [selPass,   setSelPass]   = useState(null)
+  const [addresses, setAddresses] = useState([])
+  const [selAddr,   setSelAddr]   = useState(null)
+  const [resumes,   setResumes]   = useState([])
+  const [selResume, setSelResume] = useState(null)
   const EMPTY_RESUME = {
     title:'', direction:'', company:'', status:'draft',
     summary:'', skills:'', experience:'', education:'', notes:'',
@@ -67,36 +67,36 @@ export default function Page() {
   }
   const [resumeForm, setResumeForm] = useState(EMPTY_RESUME)
   const [cvCopied, setCvCopied] = useState(false)
-  const [theme, setTheme] = useState<Theme>('light')
+  const [theme, setTheme] = useState('light')
   const [pinLocked, setPinLocked] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
-  const [medical, setMedical] = useState<DB.MedicalRecord[]>([])
-  const [contacts, setContacts] = useState<DB.Contact[]>([])
+  const [medical, setMedical] = useState([])
+  const [contacts, setContacts] = useState([])
   const [medForm, setMedForm] = useState({ type: 'gp', title: '', value: '', notes: '', valid_until: '' })
   const [contactForm, setContactForm] = useState({ name: '', relation: '', phone: '', notes: '', is_primary: false })
-  const [selMed, setSelMed] = useState<DB.MedicalRecord | null>(null)
-  const [selContact, setSelContact] = useState<DB.Contact | null>(null)
-  const resumeFileRef = useRef<HTMLInputElement>(null)
-  const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([])
+  const [selMed, setSelMed] = useState(null)
+  const [selContact, setSelContact] = useState(null)
+  const resumeFileRef = useRef(null)
+  const [resumeFiles, setResumeFiles] = useState([])
   const [fileUploading, setFileUploading] = useState(false)
   const [addrForm,  setAddrForm]  = useState({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
   const [filterCat, setFilterCat] = useState('all')
   const [search,    setSearch]    = useState('')
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
-  const [confirmDel,setConfirmDel]= useState<string | null>(null)
-  const [photoView, setPhotoView] = useState<string | null>(null)
-  const [profForm,  setProfForm]  = useState<Partial<Profile>>({})
+  const [confirmDel,setConfirmDel]= useState(null)
+  const [photoView, setPhotoView] = useState(null)
+  const [profForm,  setProfForm]  = useState({})
   const [docForm,   setDocForm]   = useState({ category: 'immigration', title: '', title_ru: '', number: '', valid_from: '', valid_until: '', notes: '', notes_ru: '', pinned: false })
   const [passForm,  setPassForm]  = useState({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
   const [photoLabel, setPhotoLabel] = useState('')
-  const passPhotoRef   = useRef<HTMLInputElement>(null)
-  const passCameraRef  = useRef<HTMLInputElement>(null)
-  const docPhotoRef    = useRef<HTMLInputElement>(null)
-  const docCameraRef   = useRef<HTMLInputElement>(null)
+  const passPhotoRef   = useRef(null)
+  const passCameraRef  = useRef(null)
+  const docPhotoRef    = useRef(null)
+  const docCameraRef   = useRef(null)
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
 
@@ -123,12 +123,12 @@ export default function Page() {
 
   // PIN functions
   const PIN_KEY = 'uk_pin'
-  const checkPin = (input: string) => {
+  const checkPin = (input) => {
     const stored = localStorage.getItem(PIN_KEY)
     if (input === stored) { setPinLocked(false); setPinInput(''); setPinError(false) }
     else { setPinError(true); setTimeout(() => { setPinError(false); setPinInput('') }, 1000) }
   }
-  const setPin = (pin: string) => { localStorage.setItem(PIN_KEY, pin) }
+  const setPin = (pin) => { localStorage.setItem(PIN_KEY, pin) }
   const removePin = () => { localStorage.removeItem(PIN_KEY) }
 
   // Medical handlers
@@ -140,7 +140,7 @@ export default function Page() {
     setMedForm({ type: 'gp', title: '', value: '', notes: '', valid_until: '' })
     setSaving(false)
   }
-  const handleDeleteMedical = async (id: string) => {
+  const handleDeleteMedical = async (id) => {
     await DB.deleteMedical(id)
     setMedical(prev => prev.filter(m => m.id !== id))
     setSelMed(null)
@@ -155,7 +155,7 @@ export default function Page() {
     setContactForm({ name: '', relation: '', phone: '', notes: '', is_primary: false })
     setSaving(false)
   }
-  const handleDeleteContact = async (id: string) => {
+  const handleDeleteContact = async (id) => {
     await DB.deleteContact(id)
     setContacts(prev => prev.filter(c => c.id !== id))
     setSelContact(null)
@@ -170,7 +170,7 @@ export default function Page() {
     ...resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).map(r => ({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r as any); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } })),
     ...todos.filter(t => t.text.toLowerCase().includes(gq) || t.textRu.toLowerCase().includes(gq)).map(t => ({ type: 'todo', icon: t.done ? '✅' : '⬜', title: t.text, sub: '', id: t.id, action: () => { setTab('todo'); setShowSearch(false); setGlobalSearch('') } })),
   ] : []
-  const cat = (id: string) => CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]
+  const cat = (id) => CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]
 
   // ── LOAD
   useEffect(() => {
@@ -200,9 +200,9 @@ export default function Page() {
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocsWithPhotos(user.id)
       setDocs(freshDocs)
-      const saved = localStorage.getItem('uk_lang') as Lang
+      const saved = localStorage.getItem('uk_lang')
       if (saved) setLang(saved)
-      const th = localStorage.getItem('uk_theme') as Theme
+      const th = localStorage.getItem('uk_theme')
       if (th) setTheme(th)
       const pin = localStorage.getItem('uk_pin')
       if (pin) setPinLocked(true)
@@ -349,7 +349,7 @@ export default function Page() {
     setDocForm({ category: 'immigration', title: '', title_ru: '', number: '', valid_from: '', valid_until: '', notes: '', notes_ru: '', pinned: false })
     switchTab('docs'); setSaving(false)
   }
-  const handleDeleteDoc = async (id: string) => {
+  const handleDeleteDoc = async (id) => {
     await DB.deleteDoc(id)
     setDocs(prev => prev.filter(d => d.id !== id))
     setConfirmDel(null); setSelDoc(null); setView('list')
@@ -387,14 +387,14 @@ export default function Page() {
     setPassForm({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
     switchTab('passport'); setSaving(false)
   }
-  const handleDeletePassport = async (id: string) => {
+  const handleDeletePassport = async (id) => {
     await DB.deletePassport(id)
     setPassports(prev => prev.filter(p => p.id !== id))
     setConfirmDel(null); setSelPass(null); setView('list')
   }
 
   // ── IMAGE COMPRESSION → base64 (max 900px, ~150KB)
-  const compressImage = (file: File): Promise<string> => {
+  const compressImage = (file) => {
     return new Promise((resolve) => {
       // Fallback: raw base64 if canvas fails
       const fallback = () => {
@@ -441,7 +441,7 @@ export default function Page() {
     })
   }
 
-  const handleAddPhoto = async (file: File) => {
+  const handleAddPhoto = async (file) => {
     if (!user || !selPass) return
     const label = photoLabel || t('Page', 'Страница', 'Сторінка')
     setSaving(true)
@@ -499,14 +499,14 @@ export default function Page() {
     setSaving(false)
   }
 
-  const handleDeleteResume = async (id: string) => {
+  const handleDeleteResume = async (id) => {
     await DB.deleteResume(id)
     setResumes(prev => prev.filter(r => r.id !== id))
     setConfirmDel(null); setSelResume(null); setView('list')
   }
 
   // ── RESUME FILE UPLOAD
-  const handleUploadResumeFile = async (file: File) => {
+  const handleUploadResumeFile = async (file) => {
     if (!user || !selResume) return
     const MAX_MB = 5
     if (file.size > MAX_MB * 1024 * 1024) {
@@ -586,7 +586,7 @@ export default function Page() {
     { id: 'interview', en: 'Interview', ru: 'Інтервʼю',  uk: 'Інтервʼю', color: '#b45309', bg: '#fff7ed' },
     { id: 'rejected',  en: 'Rejected',  ru: 'Відмова',     uk: 'Відмова',   color: '#c62828', bg: '#fee2e2' },
   ]
-  const resumeStatus = (id: string) => RESUME_STATUSES.find(s => s.id === id) ?? RESUME_STATUSES[0]
+  const resumeStatus = (id) => RESUME_STATUSES.find(s => s.id === id) ?? RESUME_STATUSES[0]
 
   const RESUME_COLORS = ['#1a4480','#0369a1','#2e7d32','#b45309','#c62828','#5b21b6','#0f766e','#1a2a4a']
 
@@ -609,7 +609,7 @@ export default function Page() {
     setAddrForm({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
     switchTab('address'); setSaving(false)
   }
-  const handleDeleteAddress = async (id: string) => {
+  const handleDeleteAddress = async (id) => {
     await DB.deleteAddress(id)
     setAddresses(prev => prev.filter(a => a.id !== id))
     setConfirmDel(null); setSelAddr(null); setView('list')
@@ -639,7 +639,7 @@ export default function Page() {
 
   // ── TODO EDIT
   const [todoForm, setTodoForm] = useState({ text: '', textRu: '', category: 'other', week: 1 })
-  const [selTodo, setSelTodo] = useState<TodoItem | null>(null)
+  const [selTodo, setSelTodo] = useState(null)
 
   const handleAddTodo = async () => {
     if (!user || !todoForm.text) return
@@ -653,7 +653,7 @@ export default function Page() {
   }
 
   // ── DOC PHOTO ACTIONS
-  const handleAddDocPhoto = async (file: File) => {
+  const handleAddDocPhoto = async (file) => {
     if (!user || !selDoc) return
     const label = docPhotoLabel || t('Photo', 'Фото', 'Фото')
     setSaving(true)
@@ -690,7 +690,7 @@ export default function Page() {
     setView('list')
   }
 
-  const handleDeleteTodo = async (id: string) => {
+  const handleDeleteTodo = async (id) => {
     if (!user) return
     const nt = todos.filter(t => t.id !== id)
     setTodos(nt)
