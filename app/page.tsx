@@ -782,7 +782,7 @@ export default function Page() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: D.bg, color: D.text }}>
+    <div style={{ minHeight: '100vh', background: theme === 'dark' ? '#0f172a' : C.bg, color: theme === 'dark' ? '#f1f5f9' : C.text }}>
 
       {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
       <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
