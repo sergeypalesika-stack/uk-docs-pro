@@ -780,8 +780,7 @@ export default function AppContent() {
                   qrDoc.number ? `No: ${qrDoc.number}` : '',
                   qrDoc.valid_until ? `Valid until: ${formatDate(qrDoc.valid_until)}` : '',
                   qrDoc.notes ? `Notes: ${qrDoc.notes}` : '',
-                ].filter(Boolean).join('
-')
+                ].filter(Boolean).join('%0A')
               )}`}
               alt="QR Code"
               style={{ width: 220, height: 220, borderRadius: 12 }}
