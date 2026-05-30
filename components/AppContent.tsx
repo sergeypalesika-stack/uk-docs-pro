@@ -1,6 +1,6 @@
 'use client'
 
-// Основной компонент приложения - отделен от page.tsx для исправления компиляции SWC
+// Main app component - separated from page.tsx to fix SWC compilation
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
@@ -10,31 +10,31 @@ import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
-// ── ТИПЫ
+// ── TYPES
 interface Doc { id: string; category: string; title: string; title_ru: string; number: string; valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean; member: string; document_photos?: DocPhoto[] }
 interface PassportPhoto { id: string; label: string; data_url: string; added_at: string }
 interface Passport { id: string; type: string; number: string; issued_by: string; issued_date: string | null; expiry_date: string | null; notes: string; passport_photos: PassportPhoto[] }
 interface Profile { id: string; name: string; name_ru: string; dob: string; nationality: string; avatar: string }
 interface TodoItem { id: string; text: string; textRu: string; done: boolean; week: number; category: string }
 
-введите Lang = 'en' | 'ру' | 'Великобритания'
-type Theme = 'light' | 'dark'
+type Lang    = 'en' | 'ru' | 'uk'
+type Theme   = 'light' | 'dark'
 type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'medical' | 'profile'
-type View = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
+type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
-// ── ЦВЕТА
+// ── COLORS
 const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6', surface: '#ffffff', bg: '#f1f5fb', border: '#e2e8f4', muted: '#7a8aaa', text: '#1a2035', textSub: '#4a5570', red: '#dc2626', green: '#16a34a' }
 
 const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 13px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, outline: 'none', background: C.bg, boxSizing: 'border-box' }
 
-// ── МЕЛКИЕ КОМПОНЕНТЫ
+// ── SMALL COMPONENTS
 function ExpiryBadge({ d }) {
   const st = getExpiryStatus(d); if (!st) return null
   return <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>{st.label}</span>
 }
 function CopyBtn({ value, lang }) {
-  const [ок, setOk] = useState(false)
-  return <button onClick={() => { navigator.clipboard.writeText(value); setOk(true); setTimeout(() => setOk(false), 1800) }} style={{ background: ok ? '#dcfce7' : C.bg, color: ok ? '#166534' : C.blue, border: `1.5px solid ${ok ? '#86efac' : C.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{ok ? '✓' : '⎘'} {ok ? (lang === 'ru' ? 'Скопировано' : 'Скопировано') : (lang === 'ru' ? 'Копировать' : 'Копировать')</button>
+  const [ok, setOk] = useState(false)
+  return <button onClick={() => { navigator.clipboard.writeText(value); setOk(true); setTimeout(() => setOk(false), 1800) }} style={{ background: ok ? '#dcfce7' : C.bg, color: ok ? '#166534' : C.blue, border: `1.5px solid ${ok ? '#86efac' : C.border}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{ok ? '✓' : '⎘'} {ok ? (lang === 'ru' ? 'Скопировано' : 'Copied') : (lang === 'ru' ? 'Копировать' : 'Copy')}</button>
 }
 function FField({ label, children }) {
   return <div style={{ marginBottom: 16 }}><div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>{label}</div>{children}</div>
@@ -46,25 +46,25 @@ function SLabel({ children }) {
   return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>{children}</div>
 }
 
-// ── ГЛАВНОЕ
+// ── MAIN
 export default function AppContent() {
-  const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [docs, setDocs] = useState([])
+  const [user,      setUser]      = useState(null)
+  const [profile,   setProfile]   = useState(null)
+  const [docs,      setDocs]      = useState([])
   const [passports, setPassports] = useState([])
-  const [todos, setTodos] = useState(DEFAULT_TODOS)
-  const [lang, setLang] = useState('ru')
-  const [tab, setTab] = useState('docs')
-  const [view, setView] = useState('list')
-  const [selDoc, setSelDoc] = useState(null)
-  const [selPass, setSelPass] = useState(null)
+  const [todos,     setTodos]     = useState(DEFAULT_TODOS)
+  const [lang,      setLang]      = useState('ru')
+  const [tab,       setTab]       = useState('docs')
+  const [view,      setView]      = useState('list')
+  const [selDoc,    setSelDoc]    = useState(null)
+  const [selPass,   setSelPass]   = useState(null)
   const [addresses, setAddresses] = useState([])
-  const [selAddr, setSelAddr] = useState(null)
-  const [resumes, setResumes] = useState([])
+  const [selAddr,   setSelAddr]   = useState(null)
+  const [resumes,   setResumes]   = useState([])
   const [selResume, setSelResume] = useState(null)
   const EMPTY_RESUME = {
-    заголовок:'', направление:'', компания:'', статус:'черновик',
-    краткое описание:'', навыки:'', опыт:'', образование:'', примечания:'',
+    title:'', direction:'', company:'', status:'draft',
+    summary:'', skills:'', experience:'', education:'', notes:'',
     color:'#1a4480', pinned:false
   }
   const [resumeForm, setResumeForm] = useState(EMPTY_RESUME)
@@ -80,32 +80,32 @@ export default function AppContent() {
   const [contacts, setContacts] = useState([])
   const [medForm, setMedForm] = useState({ type: 'gp', title: '', value: '', notes: '', valid_until: '' })
   const [contactForm, setContactForm] = useState({ name: '', relation: '', phone: '', notes: '', is_primary: false })
-  const [selMed, setSelMed] = useState (нуль)
+  const [selMed, setSelMed] = useState(null)
   const [selContact, setSelContact] = useState(null)
   const resumeFileRef = useRef(null)
   const [resumeFiles, setResumeFiles] = useState([])
   const [fileUploading, setFileUploading] = useState(false)
-  const [addrForm, setAddrForm] = useState({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
+  const [addrForm,  setAddrForm]  = useState({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
   const [filterCat, setFilterCat] = useState('all')
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [search,    setSearch]    = useState('')
+  const [loading,   setLoading]   = useState(true)
+  const [saving,    setSaving]    = useState(false)
   const [confirmDel,setConfirmDel]= useState(null)
   const [photoView, setPhotoView] = useState(null)
-  const [profForm, setProfForm] = useState({})
-  const [docForm, setDocForm] = useState({ category: 'immigration', title: '', title_ru: '', number: '', valid_from: '', valid_until: '', notes: '', notes_ru: '', pinned: false })
-  const [passForm, setPassForm] = useState({ type: 'Украинский паспорт', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '', member: '' })
+  const [profForm,  setProfForm]  = useState({})
+  const [docForm,   setDocForm]   = useState({ category: 'immigration', title: '', title_ru: '', number: '', valid_from: '', valid_until: '', notes: '', notes_ru: '', pinned: false })
+  const [passForm,  setPassForm]  = useState({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '', member: '' })
   const [photoLabel, setPhotoLabel] = useState('')
-  const passPhotoRef = useRef(null)
-  const passCameraRef = useRef(null)
-  const docPhotoRef = useRef(null)
-  const docCameraRef = useRef(null)
+  const passPhotoRef   = useRef(null)
+  const passCameraRef  = useRef(null)
+  const docPhotoRef    = useRef(null)
+  const docCameraRef   = useRef(null)
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
 
-  const t = useCallback((en, ru, uk) => lang === 'ru' ? ru : lang === 'uk' ? (uk || ru): en, [lang])
+  const t = useCallback((en, ru, uk) => lang === 'ru' ? ru : lang === 'uk' ? (uk || ru) : en, [lang])
 
-  // Темный режим
+  // Dark mode
   const dark = theme === 'dark'
   const Dd = { navy: '#e2e8f0', navyM: '#cbd5e1', blue: '#60a5fa', accent: '#3b82f6', surface: '#1e293b', bg: '#0f172a', border: '#334155', muted: '#64748b', text: '#f1f5f9', textSub: '#94a3b8', red: '#f87171', green: '#4ade80' }
   const Dl = { navy: C.navy, navyM: C.navyM, blue: C.blue, accent: C.accent, surface: C.surface, bg: C.bg, border: C.border, muted: C.muted, text: C.text, textSub: C.textSub, red: C.red, green: C.green }
@@ -116,7 +116,7 @@ export default function AppContent() {
     setTheme(nt); localStorage.setItem('uk_theme', nt)
   }
 
-  // Функции PIN-кода
+  // PIN functions
   const PIN_KEY = 'uk_pin'
   const checkPin = (input) => {
     const stored = localStorage.getItem(PIN_KEY)
@@ -126,7 +126,7 @@ export default function AppContent() {
   const setPin = (pin) => { localStorage.setItem(PIN_KEY, pin) }
   const removePin = () => { localStorage.removeItem(PIN_KEY) }
 
-  // Медицинские работники
+  // Medical handlers
   const handleAddMedical = async () => {
     if (!user || !medForm.title) return
     setSaving(true)
@@ -141,7 +141,7 @@ export default function AppContent() {
     setSelMed(null)
   }
 
-  // Обработчики контактов
+  // Contact handlers
   const handleAddContact = async () => {
     if (!user || !contactForm.name || !contactForm.phone) return
     setSaving(true)
@@ -156,7 +156,7 @@ export default function AppContent() {
     setSelContact(null)
   }
 
-  // Результаты глобального поиска
+  // Global search results
   const gq = globalSearch.toLowerCase().trim()
   const getSearchResults = () => {
     if (gq.length <= 1) return []
@@ -166,16 +166,16 @@ export default function AppContent() {
     addresses.filter(a => a.label.toLowerCase().includes(gq) || a.city.toLowerCase().includes(gq)).forEach(a => results.push({ type: 'addr', icon: '📍', title: a.label, sub: [a.city, a.postcode].filter(Boolean).join(', '), id: a.id, action: () => { setTab('address'); setSelAddr(a); setView('detail'); setShowSearch(false); setGlobalSearch('') } }))
     resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).forEach(r => results.push({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } }))
     todos.filter(t => t.text.toLowerCase().includes(gq) || t.textRu.toLowerCase().includes(gq)).forEach(t => results.push({ type: 'todo', icon: t.done ? '✅' : '⬜', title: t.text, sub: '', id: t.id, action: () => { setTab('todo'); setShowSearch(false); setGlobalSearch('') } }))
-    вернуть результаты
+    return results
   }
   const searchResults = getSearchResults()
   const cat = (id) => CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1]
 
-  // ── ЗАГРУЗИТЬ
+  // ── LOAD
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      если (!user) вернуть
+      if (!user) return
       setUser(user)
       const [prof, docs, passes, todos, addrs, res, med, ctcts] = await Promise.all([
         DB.getProfile(user.id),
@@ -197,7 +197,7 @@ export default function AppContent() {
       setMedical(med)
       setContacts(ctcts)
       await DB.seedDefaultDocs(user.id)
-      const FreshDocs = ждут DB.getDocsWithPhotos(user.id)
+      const freshDocs = await DB.getDocsWithPhotos(user.id)
       setDocs(freshDocs)
       const saved = localStorage.getItem('uk_lang')
       if (saved) setLang(saved)
@@ -207,13 +207,13 @@ export default function AppContent() {
       if (pin) setPinLocked(true)
       setLoading(false)
     }
-    нагрузка()
+    load()
   }, [])
 
-  // ── ФУНКЦИИ ЭКСПОРТА ───────────────────────────────────
+  // ── EXPORT FUNCTIONS ──────────────────────────────────
   const exportCSV = () => {
     const rows: string[][] = [
-      ['Категория', 'Название', 'Название RU', 'Номер', 'Действительно с', 'Действительно до', 'Примечания'],
+      ['Category', 'Title', 'Title RU', 'Number', 'Valid From', 'Valid Until', 'Notes'],
     ]
     docs.forEach(d => {
       const c = CATEGORIES.find(c => c.id === d.category)
@@ -237,25 +237,25 @@ export default function AppContent() {
 
   const exportPrint = () => {
     const name = profile?.name || user?.email || 'User'
-    const dob ​​= profile?.dob ? formatDate(profile.dob) : '—'
+    const dob  = profile?.dob ? formatDate(profile.dob) : '—'
     const expiring = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 90 })
-    const expired = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x < 0 })
+    const expired  = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x < 0 })
 
     const docRows = docs.map(d => {
       const c = CATEGORIES.find(c => c.id === d.category)
       const status = d.valid_until ? (daysUntil(d.valid_until || '')! < 0 ? '❌ EXPIRED' : `✓ ${daysUntil(d.valid_until || '')}d left`) : '—'
-      return `<tr><td>${c?.icon || ''} ${d.title}</td><td style="font-family:monospace">${d.number || '—'}</td><td>${d.valid_until ? formatDate(d.valid_until) '—'}</td><td>${status}</td></tr>`
-    }).присоединиться('')
+      return `<tr><td>${c?.icon || ''} ${d.title}</td><td style="font-family:monospace">${d.number || '—'}</td><td>${d.valid_until ? formatDate(d.valid_until) : '—'}</td><td>${status}</td></tr>`
+    }).join('')
 
     const addrRows = addresses.map(a =>
       `<tr><td>${a.is_home ? '🏠' : '📍'} <b>${a.label}</b></td><td>${[a.line1,a.line2,a.city,a.postcode,a.country].filter(Boolean).join(', ')}</td></tr>`
-    ).присоединиться('')
+    ).join('')
 
     const todoRows = todos.map(t =>
-      `<tr><td>${t.done ? '✅' '⬜'}</td><td style="text-decoration:${t.done?'line-through':'none'};color:${t.done?'#aaa':'#000'}">${t.text}</td></tr>`
-    ).присоединиться('')
+      `<tr><td>${t.done ? '✅' : '⬜'}</td><td style="text-decoration:${t.done?'line-through':'none'};color:${t.done?'#aaa':'#000'}">${t.text}</td></tr>`
+    ).join('')
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Документы Великобритании — ${name}</title>
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>UK Docs — ${name}</title>
     <style>
       body { font-family: Arial, sans-serif; font-size: 13px; color: #111; max-width: 800px; margin: 0 auto; padding: 20px; }
       h1 { color: #0f1f3d; border-bottom: 3px solid #0f1f3d; padding-bottom: 8px; }
@@ -269,24 +269,24 @@ export default function AppContent() {
       .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
       @media print { body { padding: 0; } }
     </style></head><body>
-    <h1>🇬🇧 Документы Великобритании — ${name}</h1>
-    <div class="meta">Сгенерировано: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}  |  Дата рождения: ${dob}  |  ${user?.email}</div>
+    <h1>🇬🇧 UK Docs — ${name}</h1>
+    <div class="meta">Generated: ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})} &nbsp;|&nbsp; DOB: ${dob} &nbsp;|&nbsp; ${user?.email}</div>
 
     ${expiring.length > 0 || expired.length > 0 ? `
-    <h2>⚠️ Требуется внимание</h2>
-    <table><tr><th>Статус документа</th><th>
+    <h2>⚠️ Attention Required</h2>
+    <table><tr><th>Document</th><th>Status</th></tr>
     ${expired.map(d=>`<tr class="expired"><td>${d.title}</td><td>EXPIRED ${formatDate(d.valid_until || '')}</td></tr>`).join('')}
-    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Срок действия истекает через ${daysUntil(d.valid_until || '')} дней — ${formatDate(d.valid_until || '')}</td></tr>`).join('')}
+    ${expiring.map(d=>`<tr class="warn"><td>${d.title}</td><td>Expires in ${daysUntil(d.valid_until || '')} days — ${formatDate(d.valid_until || '')}</td></tr>`).join('')}
     </table>` : ''}
 
-    <h2>📂 Документы (${docs.length})</h2>
-    <table><tr><th>Номер/код документа</th><th>Срок действия</th><th>Статус</th></tr>${docRows}</table>
+    <h2>📂 Documents (${docs.length})</h2>
+    <table><tr><th>Document</th><th>Number / Code</th><th>Expires</th><th>Status</th></tr>${docRows}</table>
 
-    ${addresses.length > 0 ? `<h2>📍 Адреса (${addresses.length})</h2>
+    ${addresses.length > 0 ? `<h2>📍 Addresses (${addresses.length})</h2>
     <table><tr><th>Label</th><th>Address</th></tr>${addrRows}</table>` : ''}
 
-    <h2>✅ План действий (${todos.filter(t=>t.done).length}/${todos.length} выполнено)</h2>
-    <table><tr><th style="width:30px"></th><th>Задача</th></tr>${todoRows}</table>
+    <h2>✅ Action Plan (${todos.filter(t=>t.done).length}/${todos.length} done)</h2>
+    <table><tr><th style="width:30px"></th><th>Task</th></tr>${todoRows}</table>
     </body></html>`
 
     const w = window.open('', '_blank', 'width=900,height=700')!
@@ -299,21 +299,21 @@ export default function AppContent() {
   const exportClipboard = () => {
     const name = profile?.name || user?.email || ''
     const lines: string[] = [
-      `Документы Великобритании — ${имя}`,
-      `Сгенерировано: ${new Date().toLocaleDateString('en-GB')}`,
+      `UK DOCS — ${name}`,
+      `Generated: ${new Date().toLocaleDateString('en-GB')}`,
       '',
-      '=== ДОКУМЕНТЫ ===',
+      '=== DOCUMENTS ===',
     ]
     docs.forEach(d => {
       lines.push(`• ${d.title}${d.number ? ' — ' + d.number : ''}${d.valid_until ? ' (until ' + formatDate(d.valid_until) + ')' : ''}`)
     })
     if (addresses.length > 0) {
-      lines.push('', '=== АДРЕСА ===')
+      lines.push('', '=== ADDRESSES ===')
       addresses.forEach(a => {
         lines.push(`• ${a.is_home ? '[HOME] ' : ''}${a.label}: ${[a.line1,a.city,a.postcode].filter(Boolean).join(', ')}`)
       })
     }
-    lines.push('', '=== ЗАДАЧИ ===')
+    lines.push('', '=== TASKS ===')
     todos.forEach(t => lines.push(`${t.done ? '[✓]' : '[ ]'} ${t.text}`))
     navigator.clipboard.writeText(lines.join('\n'))
     setCopyDone(true)
@@ -325,21 +325,21 @@ export default function AppContent() {
     window.location.href = '/auth'
   }
 
-  const switchLang = () => { const nl = lang === 'ru' ? 'en': lang === 'en'? 'ук': 'ру'; setLang (НЛ); localStorage.setItem('uk_lang', nl) }
-  const switchTab = (tb) => { setTab(tb); setView('list'); setSelDoc(null); setSelPass(null); setSearch('') }
+  const switchLang = () => { const nl = lang === 'ru' ? 'en' : lang === 'en' ? 'uk' : 'ru'; setLang(nl); localStorage.setItem('uk_lang', nl) }
+  const switchTab  = (tb) => { setTab(tb); setView('list'); setSelDoc(null); setSelPass(null); setSearch('') }
 
-  // ── ОТФИЛЬТРОВАННЫЕ ДОКУМЕНТЫ
+  // ── FILTERED DOCS
   const filteredDocs = docs.filter(d => {
     const mc = filterCat === 'all' || d.category === filterCat
-    const q = search.toLowerCase()
+    const q  = search.toLowerCase()
     return mc && (!q || d.title.toLowerCase().includes(q) || d.title_ru?.toLowerCase().includes(q) || d.number?.toLowerCase().includes(q))
   })
   const pinned = filteredDocs.filter(d => d.pinned)
-  const rest = filteredDocs.filter(d => !d.pinned)
+  const rest   = filteredDocs.filter(d => !d.pinned)
   const expiring60 = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 60 })
-  const todoDone = todos.filter(t => t.done).length
+  const todoDone   = todos.filter(t => t.done).length
 
-  // ── ДЕЙСТВИЯ С ДОКУМЕНТОМ
+  // ── DOC ACTIONS
   const handleAddDoc = async () => {
     if (!user || !docForm.title) return
     setSaving(true)
@@ -365,10 +365,10 @@ export default function AppContent() {
     setSaving(true)
     await DB.updateDoc(selDoc.id, {
       title: docForm.title, title_ru: docForm.title_ru,
-      номер: docForm.number,
+      number: docForm.number,
       valid_from: docForm.valid_from || null, valid_until: docForm.valid_until || null,
-      примечания: docForm.notes, notes_ru: docForm.notes_ru,
-      закреплено: docForm.pinned,
+      notes: docForm.notes, notes_ru: docForm.notes_ru,
+      pinned: docForm.pinned,
     })
     const updated = { ...selDoc, ...docForm, valid_from: docForm.valid_from || null, valid_until: docForm.valid_until || null }
     setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
@@ -377,13 +377,13 @@ export default function AppContent() {
     setSaving(false)
   }
 
-  // ── ДЕЙСТВИЯ С ПАСПОРТОМ
+  // ── PASSPORT ACTIONS
   const handleAddPassport = async () => {
     if (!user || !passForm.number) return
     setSaving(true)
     const np = await DB.addPassport(user.id, { ...passForm, issued_date: passForm.issued_date || null, expiry_date: passForm.expiry_date || null })
     if (np) setPassports(prev => [{ ...(np), passport_photos: [] }, ...prev])
-    setPassForm({ type: 'Украинский паспорт', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
+    setPassForm({ type: 'Ukrainian Passport', number: '', issued_by: '', issued_date: '', expiry_date: '', notes: '' })
     switchTab('passport'); setSaving(false)
   }
   const handleDeletePassport = async (id) => {
@@ -392,21 +392,21 @@ export default function AppContent() {
     setConfirmDel(null); setSelPass(null); setView('list')
   }
 
-  // ── СЖАТИЕ ИЗОБРАЖЕНИЯ → base64 (максимум 900 пикселей, ~150 КБ)
+  // ── IMAGE COMPRESSION → base64 (max 900px, ~150KB)
   const compressImage = (file) => {
     return new Promise((resolve) => {
-      // В случае сбоя холста: резервный вариант: необработанный base64.
+      // Fallback: raw base64 if canvas fails
       const fallback = () => {
         const r = new FileReader()
         r.onload = e => resolve(e.target?.result || '')
         r.onerror = () => resolve('')
         r.readAsDataURL(file)
       }
-      пытаться {
+      try {
         const img = new Image()
         const url = URL.createObjectURL(file)
         img.onload = () => {
-          пытаться {
+          try {
             const MAX = 900
             let { width, height } = img
             if (width > MAX || height > MAX) {
@@ -420,16 +420,16 @@ export default function AppContent() {
             ctx.drawImage(img, 0, 0, width, height)
             URL.revokeObjectURL(url)
             const result = canvas.toDataURL('image/jpeg', 0.72)
-            // Если размер все еще слишком большой, сжимайте сильнее.
+            // If still too large, compress harder
             if (result.length > 1400000) {
               const c2 = document.createElement('canvas')
               const M2 = 600
-              пусть w2 = ширина, h2 = высота
-              if (w2 > M2) { h2 = Math.round(h2 * M2/w2); w2 = M2 }
+              let w2 = width, h2 = height
+              if (w2 > M2) { h2 = Math.round(h2 * M2 / w2); w2 = M2 }
               c2.width = w2; c2.height = h2
               c2.getContext('2d')!.drawImage(img, 0, 0, w2, h2)
               resolve(c2.toDataURL('image/jpeg', 0.60))
-            } еще {
+            } else {
               resolve(result)
             }
           } catch { URL.revokeObjectURL(url); fallback() }
@@ -442,22 +442,22 @@ export default function AppContent() {
 
   const handleAddPhoto = async (file) => {
     if (!user || !selPass) return
-    константная метка = photoLabel || t('Страница', 'Страница', 'Сторинка')
+    const label = photoLabel || t('Page', 'Страница', 'Сторінка')
     setSaving(true)
-    пытаться {
+    try {
       const dataUrl = await compressImage(file)
-      const ph = ожидание DB.addPassportPhoto(selPass.id, user.id, label, dataUrl)
-      если (ph) {
+      const ph = await DB.addPassportPhoto(selPass.id, user.id, label, dataUrl)
+      if (ph) {
         const updated = passports.map(p => p.id === selPass.id
           ? { ...p, passport_photos: [...p.passport_photos, ph] }
-          : п)
+          : p)
         setPassports(updated)
         setSelPass(updated.find(p => p.id === selPass.id) || null)
       }
       setPhotoLabel('')
     } catch(e) {
-      console.error('Ошибка фото:', e)
-      alert(t('Загрузка не удалась. Попробуйте еще раз.', 'Ошибка загрузки.', 'Помилка завантаження.'))
+      console.error('Photo error:', e)
+      alert(t('Upload failed. Try again.', 'Ошибка загрузки.', 'Помилка завантаження.'))
     }
     setSaving(false)
   }
@@ -470,13 +470,13 @@ export default function AppContent() {
 
   // ── TODO
   const handleToggleTodo = async (item) => {
-    если (!user) вернуть
+    if (!user) return
     const nt = todos.map(t => t.id === item.id ? { ...t, done: !t.done } : t)
     setTodos(nt)
     await DB.toggleTodoDB(user.id, item.id, !item.done)
   }
 
-  // ── ВОЗОБНОВЛЕНИЕ ДЕЙСТВИЙ ───────────────────────────────────
+  // ── RESUME ACTIONS ───────────────────────────────────
   const handleAddResume = async () => {
     if (!user || !resumeForm.title) return
     setSaving(true)
@@ -504,20 +504,20 @@ export default function AppContent() {
     setConfirmDel(null); setSelResume(null); setView('list')
   }
 
-  // ── ЗАГРУЗКА ФАЙЛА ВОЗОБНОВЛЕНИЯ
+  // ── RESUME FILE UPLOAD
   const handleUploadResumeFile = async (file) => {
     if (!user || !selResume) return
     const MAX_MB = 5
     if (file.size > MAX_MB * 1024 * 1024) {
-      alert(t(`Файл слишком большой. Макс ${MAX_MB}MB.`, `Файл занадто великий. Макс ${MAX_MB}МБ.`, `Файл занадто великий. Макс ${MAX_MB}МБ.`))
-      возвращаться
+      alert(t(`File too large. Max ${MAX_MB}MB.`, `Файл занадто великий. Макс ${MAX_MB}МБ.`, `Файл занадто великий. Макс ${MAX_MB}МБ.`))
+      return
     }
     setFileUploading(true)
     const reader = new FileReader()
     reader.onload = async e => {
       const base64 = (e.target?.result) || ''
       const rf = await DB.addResumeFile(selResume.id, user.id, file.name, file.type, file.size, base64)
-      если (rf) {
+      if (rf) {
         const updated = { ...selResume, resume_files: [...(selResume).resume_files || [], rf] }
         setSelResume(updated)
         setResumes(prev => prev.map(r => r.id === selResume.id ? { ...r, resume_files: [...(r).resume_files || [], rf] } : r))
@@ -544,8 +544,8 @@ export default function AppContent() {
   }
 
   const formatFileSize = (bytes) => {
-    Если (байты < 1024), вернуть `${байты}B`
-    Если (байты < 1024 * 1024), вернуть `${(байты / 1024).toFixed(0)}KB`
+    if (bytes < 1024) return `${bytes}B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
     return `${(bytes / 1024 / 1024).toFixed(1)}MB`
   }
 
@@ -565,47 +565,47 @@ export default function AppContent() {
 
   const copyResumeToClipboard = (r) => {
     const parts = [
-      р.титул,
+      r.title,
       r.direction ? `Position: ${r.direction}` : '',
-      r.company ? `Компания: ${r.company}` : '',
+      r.company ? `Company: ${r.company}` : '',
       '',
-      r.summary ? `ОБО МНЕ\n${r.summary}` : '',
-      r.skills ? `\nКЛЮЧЕВЫЕ НАВЫКИ\n${r.skills}` : '',
+      r.summary ? `ABOUT ME\n${r.summary}` : '',
+      r.skills ? `\nKEY SKILLS\n${r.skills}` : '',
       r.experience ? `\nEXPERIENCE\n${r.experience}` : '',
-      r.education ? `\nОБРАЗОВАНИЕ\n${r.education}` : '',
+      r.education ? `\nEDUCATION\n${r.education}` : '',
       r.notes ? `\nNOTES\n${r.notes}` : '',
     ].filter(Boolean).join('\n')
     navigator.clipboard.writeText(parts)
   }
 
   const RESUME_STATUSES = [
-    { id: 'draft', en: 'Draft', ru: 'Чернетка', uk: 'Чернетка', цвет: '#546e7a', bg: '#f1f5fb' },
-    { id: 'ready', en: 'Ready', ru: 'Готово', uk: 'Готово', цвет: '#2e7d32', bg: '#f0fdf4' },
-    { id: 'sent', en: 'Sent', ru: 'Відправлено', uk: 'Відправлено', color: '#1d4ed8', bg: '#eff6ff' },
-    { id: 'интервью', en: 'Интервью', ru: 'Интервью', uk: 'Интервью', цвет: '#b45309', bg: '#fff7ed' },
-    { id: 'rejected', en: 'Rejected', ru: 'Відмова', uk: 'Відмова', цвет: '#c62828', bg: '#fee2e2' },
+    { id: 'draft',     en: 'Draft',     ru: 'Чернетка',   uk: 'Чернетка',  color: '#546e7a', bg: '#f1f5fb' },
+    { id: 'ready',     en: 'Ready',     ru: 'Готово',      uk: 'Готово',    color: '#2e7d32', bg: '#f0fdf4' },
+    { id: 'sent',      en: 'Sent',      ru: 'Відправлено', uk: 'Відправлено', color: '#1d4ed8', bg: '#eff6ff' },
+    { id: 'interview', en: 'Interview', ru: 'Інтервʼю',  uk: 'Інтервʼю', color: '#b45309', bg: '#fff7ed' },
+    { id: 'rejected',  en: 'Rejected',  ru: 'Відмова',     uk: 'Відмова',   color: '#c62828', bg: '#fee2e2' },
   ]
   const resumeStatus = (id) => RESUME_STATUSES.find(s => s.id === id) || RESUME_STATUSES[0]
 
 
-  const FAMILY = ['Сергей', 'Я сам / Сам', 'Дружина/Жена', 'Дитина/Ребёнок', 'Мама', 'Тато/Папа']
+  const FAMILY = ['Сергей', 'Я сам / Сам', 'Дружина / Жена', 'Дитина / Ребёнок', 'Мама', 'Тато / Папа']
   const RESUME_COLORS = ['#1a4480','#0369a1','#2e7d32','#b45309','#c62828','#5b21b6','#0f766e','#1a2a4a']
 
   const handleResetTodos = async () => {
-    если (!user) вернуть
+    if (!user) return
     await DB.resetTodosDB(user.id)
     setTodos(DEFAULT_TODOS.map(t => ({ ...t, done: false })))
   }
 
-  // ── ДЕЙСТВИЯ ПО УКАЗАНИЮ АДРЕСА
+  // ── ADDRESS ACTIONS
   const handleAddAddress = async () => {
     if (!user || !addrForm.label) return
     setSaving(true)
     if (addrForm.is_home) await DB.setHomeAddress(user.id, 'none')
     const na = await DB.addAddress(user.id, addrForm)
-    если (на) {
+    if (na) {
       if (addrForm.is_home) setAddresses(prev => [na, ...prev.map(a => ({ ...a, is_home: false }))])
-      иначе setAddresses(prev => [...prev, na])
+      else setAddresses(prev => [...prev, na])
     }
     setAddrForm({ label: '', label_ru: '', line1: '', line2: '', city: '', postcode: '', country: 'United Kingdom', notes: '', is_home: false, color: '#2457a4' })
     switchTab('address'); setSaving(false)
@@ -616,7 +616,7 @@ export default function AppContent() {
     setConfirmDel(null); setSelAddr(null); setView('list')
   }
   const handleSetHome = async (addr) => {
-    если (!user) вернуть
+    if (!user) return
     await DB.setHomeAddress(user.id, addr.id)
     setAddresses(prev => prev.map(a => ({ ...a, is_home: a.id === addr.id })))
     setSelAddr({ ...addr, is_home: true })
@@ -630,7 +630,7 @@ export default function AppContent() {
     if (addrForm.is_home) {
       await DB.setHomeAddress(user.id, selAddr.id)
       setAddresses(prev => prev.map(a => a.id === selAddr.id ? { ...updated, is_home: true } : { ...a, is_home: false }))
-    } еще {
+    } else {
       setAddresses(prev => prev.map(a => a.id === selAddr.id ? updated : a))
     }
     setSelAddr(updated)
@@ -644,7 +644,7 @@ export default function AppContent() {
 
   const handleAddTodo = async () => {
     if (!user || !todoForm.text) return
-    const newTodo: TodoItem = { id: генерироватьId(), текст: todoForm.text, textRu: todoForm.textRu, сделано: false, неделя: todoForm.week, категория: todoForm.category }
+    const newTodo: TodoItem = { id: generateId(), text: todoForm.text, textRu: todoForm.textRu, done: false, week: todoForm.week, category: todoForm.category }
     const nt = [...todos, newTodo]
     setTodos(nt)
     try { localStorage.setItem('uk_todos_v2', JSON.stringify(nt)) } catch(_) {}
@@ -653,23 +653,23 @@ export default function AppContent() {
     setView('list')
   }
 
-  // ── Действия с фотографиями в формате DOC
+  // ── DOC PHOTO ACTIONS
   const handleAddDocPhoto = async (file) => {
     if (!user || !selDoc) return
-    константная метка = docPhotoLabel || t('Фото', 'Фото', 'Фото')
+    const label = docPhotoLabel || t('Photo', 'Фото', 'Фото')
     setSaving(true)
-    пытаться {
+    try {
       const dataUrl = await compressImage(file)
       const ph = await DB.addDocPhoto(selDoc.id, user.id, label, dataUrl)
-      если (ph) {
+      if (ph) {
         const updated = { ...selDoc, document_photos: [...(selDoc.document_photos || []), ph] }
         setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
         setSelDoc(updated)
       }
       setDocPhotoLabel('')
     } catch(e) {
-      console.error('Ошибка фото:', e)
-      alert(t('Загрузка не удалась. Попробуйте еще раз.', 'Ошибка загрузки.', 'Помилка завантаження.'))
+      console.error('Photo error:', e)
+      alert(t('Upload failed. Try again.', 'Ошибка загрузки.', 'Помилка завантаження.'))
     }
     setSaving(false)
   }
@@ -692,7 +692,7 @@ export default function AppContent() {
   }
 
   const handleDeleteTodo = async (id) => {
-    если (!user) вернуть
+    if (!user) return
     const nt = todos.filter(t => t.id !== id)
     setTodos(nt)
     try { localStorage.setItem('uk_todos_v2', JSON.stringify(nt)) } catch(_) {}
@@ -703,7 +703,7 @@ export default function AppContent() {
     setView('list')
   }
 
-  // ── ПОДЕЛИТЬСЯ АДРЕСОМ
+  // ── SHARE ADDRESS
   const shareAddress = (addr, via) => {
     const full = [addr.line1, addr.line2, addr.city, addr.postcode, addr.country].filter(Boolean).join(', ')
     const label = lang !== 'en' && addr.label_ru ? addr.label_ru : addr.label
@@ -712,58 +712,58 @@ export default function AppContent() {
     else window.open(`https://t.me/share/url?url=${text}`, '_blank')
   }
 
-  // ── СКОПИРУЙТЕ АДРЕС
+  // ── COPY ADDRESS
   const copyAddress = (addr) => {
     const full = [addr.line1, addr.line2, addr.city, addr.postcode, addr.country].filter(Boolean).join(', ')
     navigator.clipboard.writeText(full)
   }
 
-  // ── ЦВЕТА АДРЕСА
+  // ── ADDRESS COLORS
   const ADDR_COLORS = ['#2457a4','#0369a1','#2e7d32','#b45309','#c62828','#5b21b6','#0f766e','#1a2a4a']
 
-  // ── ДОМАШНИЙ АДРЕС
+  // ── HOME ADDRESS
   const homeAddr = addresses.find(a => a.is_home)
 
-  // ── СОХРАНЕНИЕ ПРОФИЛЯ
+  // ── PROFILE SAVE
   const handleSaveProfile = async () => {
-    если (!user) вернуть
+    if (!user) return
     setSaving(true)
-    await DB.upsertProfile(user.id, { name: profForm.name || '', name_ru: profForm.name_ru || '', доб: profForm.dob || '', национальность: profForm.nationality || 'Украинец', аватар: profForm.avatar || '👤' })
+    await DB.upsertProfile(user.id, { name: profForm.name || '', name_ru: profForm.name_ru || '', dob: profForm.dob || '', nationality: profForm.nationality || 'Ukrainian', avatar: profForm.avatar || '👤' })
     const fresh = await DB.getProfile(user.id)
     setProfile(fresh); setSaving(false); setView('list')
   }
 
-  возвращаться (
+  return (
     <div style={{ minHeight: '100vh', background: theme === 'dark' ? '#0f172a' : C.bg, color: theme === 'dark' ? '#f1f5f9' : C.text }}>
 
-      {/* Загрузка */}
-      {загрузка && (
+      {/* Loading */}
+      {loading && (
         <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, flexDirection: 'column', gap: 16, zIndex: 500 }}>
           <div style={{ fontSize: 48 }}>🇬🇧</div>
-          <div style={{ color: C.muted, fontSize: 14 }}>Загрузка ваших документов…</div>
+          <div style={{ color: C.muted, fontSize: 14 }}>Loading your documents…</div>
         </div>
       )}
 
-      {/* Экран ввода PIN-кода */}
+      {/* PIN Screen */}
       {pinLocked && !loading && (
         <PinScreen
           pinInput={pinInput}
           pinError={pinError}
-          темный={темный}
+          dark={dark}
           onKey={(k) => {
             if (k === 'del') { setPinInput(p => p.slice(0,-1)); return }
-            если (k === '') return
+            if (k === '') return
             const np = pinInput + k
             setPinInput(np)
             if (np.length === 4) checkPin(np)
           }}
           onRemove={() => { removePin(); setPinLocked(false) }}
-          label={t('Введите PIN для продолжения', 'Ввести PIN для входа', 'Ввести PIN для входа')}
-          RemoveLabel={t('Забыли ПИН? Снять блокировку', 'Забули ПИН? Сняли блокировку', 'Забули ПИН? Сняли блокировку')}
+          label={t('Enter PIN to continue', 'Введіть PIN для входу', 'Введіть PIN для входу')}
+          removeLabel={t('Forgot PIN? Remove lock', 'Забули PIN? Зняти блокування', 'Забули PIN? Зняти блокування')}
         />
       )}
 
-      {/* Модальное окно с QR-кодом */}
+      {/* QR Code Modal */}
       {qrDoc && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}
           onClick={() => setQrDoc(null)}>
@@ -776,10 +776,10 @@ export default function AppContent() {
               src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(
                 [
                   qrDoc.title,
-                  qrDoc.member ? `Владелец: ${qrDoc.member}` : '',
+                  qrDoc.member ? `Owner: ${qrDoc.member}` : '',
                   qrDoc.number ? `No: ${qrDoc.number}` : '',
-                  qrDoc.valid_until ? `Действителен до: ${formatDate(qrDoc.valid_until)}` : '',
-                  qrDoc.notes ? `Примечания: ${qrDoc.notes}` : '',
+                  qrDoc.valid_until ? `Valid until: ${formatDate(qrDoc.valid_until)}` : '',
+                  qrDoc.notes ? `Notes: ${qrDoc.notes}` : '',
                 ].filter(Boolean).join('
 ')
               )}`}
@@ -787,39 +787,39 @@ export default function AppContent() {
               style={{ width: 220, height: 220, borderRadius: 12 }}
             />
             <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 12, lineHeight: 1.5 }}>
-              {t('Сканировать, чтобы просмотреть информацию о документе', 'Сканировать для просмотра информации', 'Сканировать для просмотра информации')}
+              {t('Scan to see document info', 'Скануй для перегляду інформації', 'Скануй для перегляду інформації')}
             </div>
             <button onClick={() => setQrDoc(null)} style={{ marginTop: 16, background: '#0f1f3d', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontSize: 14, fontWeight: 700, cursor: 'pointer', width: '100%' }}>
-              {t('Закрыть', 'Закрити', 'Закрити')}
+              {t('Close', 'Закрити', 'Закрити')}
             </button>
           </div>
         </div>
       )}
 
-      {/* Просмотрщик фотографий */}
+      {/* Photo viewer */}
       {photoView && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPhotoView(null)}>
           <img src={photoView} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
-          <div style={{ color: 'rgba(255,255,255,0.4)', FontSize: 13, MarginTop: 16 }}>{t('Нажмите, чтобы закрыть', 'Натисни щоб закрити', 'Натисни щоб закрити')</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 16 }}>{t('Tap to close', 'Натисни щоб закрити', 'Натисни щоб закрити')}</div>
         </div>
       )}
 
-      {/* Основное приложение (скрыто во время загрузки/заблокировано) */}
+      {/* Main app (hidden while loading/locked) */}
       {!loading && !pinLocked && (
       <>
 
-      {/* ══ ВСЕГДА СКОПИРОВАННЫЕ ВХОДНЫЕ ФАЙЛЫ (исправлена ​​ошибка Android removeChild) ══ */}
+      {/* ══ ALWAYS-MOUNTED FILE INPUTS (fix Android removeChild bug) ══ */}
       <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
-      <input ref={docPhotoRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docPhotoRef.current)docPhotoRef.current.value=''}} />
-      <input ref={docCameraRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docCameraRef.current)docCameraRef.current.value=''}} />
-      <input ref={passPhotoRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passPhotoRef.current)passPhotoRef.current.value=''}} />
+      <input ref={docPhotoRef}   type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docPhotoRef.current)docPhotoRef.current.value=''}} />
+      <input ref={docCameraRef}  type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docCameraRef.current)docCameraRef.current.value=''}} />
+      <input ref={passPhotoRef}  type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passPhotoRef.current)passPhotoRef.current.value=''}} />
       <input ref={passCameraRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passCameraRef.current)passCameraRef.current.value=''}} />
 
-      {/* ══ ЗАГОЛОВОК ══ */}
+      {/* ══ HEADER ══ */}
       <div style={{ background: dark ? 'linear-gradient(135deg, #1e293b, #0f172a)' : `linear-gradient(135deg, ${C.navy}, ${C.navyM})`, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 20px rgba(0,0,0,0.25)' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 16px' }}>
 
-          {/* Верхняя панель */}
+          {/* Top bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 56 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🇬🇧</div>
             <div style={{ flex: 1 }}>
@@ -829,19 +829,19 @@ export default function AppContent() {
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{user?.email}</div>
             </div>
-            {сохранение && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>сохранение…</span>}
-            <button onClick={switchLang} title={lang === 'ru' ? «Переключиться на английский»: lang === «en»? 'Перейти на Українську' : 'Переключить на Русский'} style={{ background: 'rgba(255,255,255,0.12)', border: '1px Solid rgba(255,255,255,0.25)', borderRadius: 8, отступ: '5px 11px', цвет: '#fff', FontSize: 13, FontWeight: 700, курсор: «указатель» }}>
-              {язык === 'ru' ? '🇬🇧 EN' : lang === 'en' ? '🇺🇦 UA' : '🇷🇺 RU'}
+            {saving && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>saving…</span>}
+            <button onClick={switchLang} title={lang === 'ru' ? 'Switch to English' : lang === 'en' ? 'Перейти на Українську' : 'Переключить на Русский'} style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, padding: '5px 11px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {lang === 'ru' ? '🇬🇧 EN' : lang === 'en' ? '🇺🇦 UA' : '🇷🇺 RU'}
             </button>
             <button onClick={signOut} style={{ background: 'rgba(220,38,38,0.2)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, padding: '5px 10px', color: '#fca5a5', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>🚪</button>
           </div>
 
-          {/* Статистика */}
+          {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, paddingBottom: 12 }}>
             {[
               { icon: '📄', val: docs.length, en: 'Documents', ru: 'Документов' },
-              { icon: '⚠️', val: expiring60.length, en: 'Expiring', ru: 'Истекает', alert: expiring60.length > 0 },
-              { icon: ' ✅', val: `${todoDone}/${todos.length}`, en: 'Tasks', ru: 'Задача' },
+              { icon: '⚠️', val: expiring60.length, en: 'Expiring', ru: 'Истекает', warn: expiring60.length > 0 },
+              { icon: '✅', val: `${todoDone}/${todos.length}`, en: 'Tasks', ru: 'Задач' },
             ].map((s, i) => (
               <div key={i} style={{ background: s.warn ? 'rgba(234,88,12,0.2)' : 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 10px', textAlign: 'center', border: s.warn ? '1px solid rgba(234,88,12,0.4)' : '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{s.icon} {lang !== 'en' ? s.ru : s.en}</div>
@@ -850,27 +850,27 @@ export default function AppContent() {
             ))}
           </div>
 
-          {/* Разделитель для нижней навигации */}
+          {/* Spacer for bottom nav */}
           <div style={{ height: 4 }} />
         </div>
       </div>
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '16px 16px 120px' }}>
 
-        {/* ══════════ Вкладка «Документы» ═══════════ */}
+        {/* ══════════ DOCS TAB ══════════ */}
 
-        {/* ══ НАЛОЖЕНИЕ ГЛОБАЛЬНОГО ПОИСКА ══ */}
+        {/* ══ GLOBAL SEARCH OVERLAY ══ */}
         {showSearch && (
           <div style={{ position: 'fixed', inset: 0, background: dark ? 'rgba(0,0,0,0.9)' : 'rgba(15,31,61,0.8)', zIndex: 300, padding: '60px 16px 20px' }}
             onClick={() => setShowSearch(false)}>
             <div onClick={e => e.stopPropagation()}>
               <div style={{ position: 'relative', marginBottom: 12 }}>
                 <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18 }}>🔍</span>
-                <ввод
-                  автофокус
+                <input
+                  autoFocus
                   value={globalSearch}
                   onChange={e => setGlobalSearch(e.target.value)}
-                  Placeholder={t('Искать всё…', 'Пошук по всему…', 'Пошук по всему…')}
+                  placeholder={t('Search everything…', 'Пошук по всьому…', 'Пошук по всьому…')}
                   style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: 14, border: 'none', fontSize: 16, background: dark ? '#1e293b' : '#fff', color: D.text, outline: 'none', boxSizing: 'border-box' }}
                 />
                 {globalSearch && <button onClick={() => setGlobalSearch('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: D.muted, fontSize: 20 }}>×</button>}
@@ -892,58 +892,58 @@ export default function AppContent() {
               )}
               {globalSearch.length > 1 && searchResults.length === 0 && (
                 <div style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, padding: '20px', textAlign: 'center', color: D.muted, fontSize: 14 }}>
-                  {t('Ничего не найдено', 'Ничого не найдено', 'Ничого не найдено')}
+                  {t('Nothing found', 'Нічого не знайдено', 'Нічого не знайдено')}
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* ══════════════ ГЛАВНАЯ ПАНЕЛЬ УПРАВЛЕНИЯ ══════════════ */}
+        {/* ══════════════ HOME DASHBOARD ══════════════ */}
         {tab === 'home' && (
           <>
-            {/* Добро пожаловать */}
+            {/* Welcome */}
             <div style={{ background: dark ? 'linear-gradient(135deg,#1e3a5f,#0f2040)' : `linear-gradient(135deg,${C.navy},${C.navyM})`, borderRadius: 20, padding: '20px 22px', marginBottom: 14, color: '#fff' }}>
               <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>
                 {new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
               </div>
               <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 2 }}>
-                {t('Привет', 'Привіт', 'Привіт')}, {profile?.name?.split(' ')[0] || 'там'} 👋
+                {t('Hello', 'Привіт', 'Привіт')}, {profile?.name?.split(' ')[0] || 'there'} 👋
               </div>
               <div style={{ fontSize: 13, opacity: 0.6 }}>
                 {docs.length} {t('documents', 'документів', 'документів')} · {resumes.length} CV · {todos.filter(t=>t.done).length}/{todos.length} {t('tasks', 'завдань', 'завдань')}
               </div>
             </div>
 
-            {/* Уведомления об истечении срока действия */}
+            {/* Expiry alerts */}
             {(() => {
               const urgent = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 30 })
               const expiring = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x > 30 && x <= 90 })
               return urgent.length > 0 || expiring.length > 0 ? (
                 <div style={{ background: dark ? '#3b1515' : '#fff7ed', border: `1px solid ${dark ? '#7f1d1d' : '#fed7aa'}`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-                  <div style={{ FontSize: 13, FontWeight: 700, цвет: темный? '#fca5a5' : '#c2410c',marginBottom: 8 }}>⚠️ {t('Требуется действие', 'Потребно увага', 'Потребно увага')</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: dark ? '#fca5a5' : '#c2410c', marginBottom: 8 }}>⚠️ {t('Action required', 'Потрібна увага', 'Потрібна увага')}</div>
                   {urgent.map(d => (
                     <div key={d.id} onClick={() => { setTab('docs'); setSelDoc(d); setView('detail') }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: dark ? '#fca5a5' : '#7c2d12', marginBottom: 4, cursor: 'pointer', padding: '4px 0' }}>
-                      <span>🔴 {d.title_ru && lang !== 'en' ? d.title_ru : d.title</span>
+                      <span>🔴 {d.title_ru && lang !== 'en' ? d.title_ru : d.title}</span>
                       <span style={{ fontWeight: 700 }}>{daysUntil(d.valid_until || '')}d</span>
                     </div>
                   ))}
                   {expiring.map(d => (
                     <div key={d.id} onClick={() => { setTab('docs'); setSelDoc(d); setView('detail') }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: dark ? '#fcd34d' : '#92400e', marginBottom: 4, cursor: 'pointer', padding: '4px 0' }}>
-                      <span>🟡 {d.title_ru && lang !== 'en' ? d.title_ru : d.title</span>
+                      <span>🟡 {d.title_ru && lang !== 'en' ? d.title_ru : d.title}</span>
                       <span>{daysUntil(d.valid_until || '')}d</span>
                     </div>
                   ))}
                 </div>
-              ) : нулевой
+              ) : null
             })()}
 
-            {/* Быстрая сетка статистики */}
+            {/* Quick stats grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               {[
-                { icon: '📂', label: t('Documents','Documenti','Documenti'), val: docs.length, color: C.navy, tab: 'docs' },
-                { icon: '📘', label: t('Passports','Паспорти','Паспорти'), val: паспорта.длина, цвет: '#0369a1', вкладка: 'паспорт' },
-                { icon: '📍', label: t('Адресы','Адреси','Адреси'), val: addresses.length, color: '#2e7d32', tab: 'address' },
+                { icon: '📂', label: t('Documents','Документи','Документи'), val: docs.length, color: C.navy, tab: 'docs' },
+                { icon: '📘', label: t('Passports','Паспорти','Паспорти'), val: passports.length, color: '#0369a1', tab: 'passport' },
+                { icon: '📍', label: t('Addresses','Адреси','Адреси'), val: addresses.length, color: '#2e7d32', tab: 'address' },
                 { icon: '📝', label: 'CV', val: resumes.length, color: '#1a4480', tab: 'resume' },
               ].map((s, i) => (
                 <div key={i} onClick={() => switchTab(s.tab)} style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 14px', cursor: 'pointer', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', borderLeft: `4px solid ${s.color}` }}>
@@ -954,11 +954,11 @@ export default function AppContent() {
               ))}
             </div>
 
-            {/* Следующие задачи */}
+            {/* Next tasks */}
             {todos.filter(t => !t.done).length > 0 && (
               <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ FontSize: 14, FontWeight: 700, Color: D.navy }}> ✅ {t('Следующие задачи', 'Наступні завдання', 'Наступні завдання')</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: D.navy }}>✅ {t('Next Tasks', 'Наступні завдання', 'Наступні завдання')}</span>
                   <button onClick={() => switchTab('todo')} style={{ background: 'none', border: 'none', color: D.blue, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t('All','Всі','Всі')} →</button>
                 </div>
                 <div style={{ background: D.bg, borderRadius: 10, height: 6, marginBottom: 12, overflow: 'hidden' }}>
@@ -967,16 +967,16 @@ export default function AppContent() {
                 {todos.filter(t => !t.done).slice(0, 3).map(item => (
                   <div key={item.id} onClick={() => handleToggleTodo(item)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
                     <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${D.border}`, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: D.text }}>{lang !== 'en' ? item.textRu || item.text : item.text</span>
+                    <span style={{ fontSize: 13, color: D.text }}>{lang !== 'en' ? item.textRu || item.text : item.text}</span>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Быстрый доступ к контактной информации для экстренных случаев */}
+            {/* Emergency contacts quick access */}
             {contacts.length > 0 && (
               <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
-                <div style={{ FontSize: 14, FontWeight: 700, Color: D.navy, MarginBottom: 12 }}>🆘 {t('Экстренные контакты', 'Екстрі контакты', 'Екстрі контакты')</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: D.navy, marginBottom: 12 }}>🆘 {t('Emergency Contacts', 'Екстрені контакти', 'Екстрені контакти')}</div>
                 {contacts.slice(0, 3).map(c => (
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: `1px solid ${D.border}` }}>
                     <span style={{ fontSize: 20 }}>{c.is_primary ? '⭐' : '👤'}</span>
@@ -990,13 +990,13 @@ export default function AppContent() {
               </div>
             )}
 
-            {/* QR-код для обмена */}
+            {/* QR Share Code */}
             {(() => {
               const sc = docs.find(d => d.number && d.title.toLowerCase().includes('share code') && d.title.toLowerCase().includes('work'))
-              если (!sc) вернуть null
-              возвращаться (
+              if (!sc) return null
+              return (
                 <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
-                  <div style={{ FontSize: 14, FontWeight: 700, Color: D.navy, MarginBottom: 8 }}>📱 {t('Право на работу', 'Право на роботу', 'Право на уу')</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: D.navy, marginBottom: 8 }}>📱 {t('Right to Work', 'Право на роботу', 'Право на роботу')}</div>
                   <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 800, letterSpacing: '0.1em', color: C.blue, marginBottom: 10 }}>{sc.number}</div>
                   <CopyBtn value={sc.number} lang={lang} />
                 </div>
@@ -1009,7 +1009,7 @@ export default function AppContent() {
           <>
             {expiring60.length > 0 && (
               <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
-                <div style={{ FontSize: 13, FontWeight: 700, Color: '#c2410c', MarginBottom: 6 }}>⚠️ {t('Скоро истекает срок действия', 'Спливає скоро', 'Спливає скоро')</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#c2410c', marginBottom: 6 }}>⚠️ {t('Expiring soon', 'Спливає скоро', 'Спливає скоро')}</div>
                 {expiring60.map(d => <div key={d.id} style={{ fontSize: 12, color: '#7c2d12', marginBottom: 2 }}>· {lang !== 'en' && d.title_ru ? d.title_ru : d.title} — {daysUntil(d.valid_until || '')}d</div>)}
               </div>
             )}
@@ -1027,50 +1027,50 @@ export default function AppContent() {
               ))}
             </div>
 
-            {pinned.length > 0 && (<><SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')</SLabel>{pinned.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)</div style={{ height: 8 }} /></>)}
+            {pinned.length > 0 && (<><SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')}</SLabel>{pinned.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)}<div style={{ height: 8 }} /></>)}
             {rest.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)}
 
             {filteredDocs.length === 0 && (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-                <div>{t('Нет документов', 'Немає документов', 'Немає документов')</div>
+                <div>{t('No documents', 'Немає документів', 'Немає документів')}</div>
               </div>
             )}
             <button onClick={() => setView('add')} style={{ position: 'fixed', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, background: C.navy, color: '#fff', border: 'none', fontSize: 28, cursor: 'pointer', boxShadow: '0 4px 20px rgba(15,31,61,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
           </>
         )}
 
-        {/* ══ ДЕТАЛИ ДОКУМЕНТА ══ */}
+        {/* ══ DOC DETAIL ══ */}
         {tab === 'docs' && view === 'detail' && selDoc && (() => {
           const c = cat(selDoc.category)
-          возврат (<>
-            <button onClick={() => { setView('list'); setSelDoc(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Назад', 'Назад', 'Назад')}</button>
+          return (<>
+            <button onClick={() => { setView('list'); setSelDoc(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
             <div style={{ background: `linear-gradient(135deg, ${c.color}, ${c.color}bb)`, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff', boxShadow: `0 8px 30px ${c.color}40` }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>{c.icon}</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{lang !== 'en' && selDoc.title_ru ? selDoc.title_ru : selDoc.title}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               {selDoc.number && <DRow label={t('Number / Code', 'Номер / Код', 'Номер / Код')}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}><span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 800, letterSpacing: '0.07em', color: C.navy }}>{selDoc.number}</span><CopyBtn value={selDoc.number} lang={lang} /></div></DRow>}
-              {selDoc.valid_from && <DRow label={t('Действителен с', 'Дійсний з', 'Дійсний з')}>{formatDate(selDoc.valid_from)</DRow>}
-              {selDoc.valid_until && <DRow label={t('Действителен до', 'Дійсний до', 'Дійсний до')}><span>{formatDate(selDoc.valid_until)</span><ExpiryBadge d={selDoc.valid_until} /></DRow>}
-              {(selDoc.notes || selDoc.notes_ru) && <DRow label={t('Notes', 'Нотатки', 'Нотатки')}><span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>{lang !== 'en' && selDoc.notes_ru ? selDoc.notes_ru : selDoc.notes</span></DRow>}
+              {selDoc.valid_from  && <DRow label={t('Valid from', 'Дійсний з', 'Дійсний з')}>{formatDate(selDoc.valid_from)}</DRow>}
+              {selDoc.valid_until && <DRow label={t('Valid until', 'Дійсний до', 'Дійсний до')}><span>{formatDate(selDoc.valid_until)}</span><ExpiryBadge d={selDoc.valid_until} /></DRow>}
+              {(selDoc.notes || selDoc.notes_ru) && <DRow label={t('Notes', 'Нотатки', 'Нотатки')}><span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>{lang !== 'en' && selDoc.notes_ru ? selDoc.notes_ru : selDoc.notes}</span></DRow>}
             </div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-              <button onClick={() => { setDocForm({ category: selDoc.category, title: selDoc.title, title_ru: selDoc.title_ru, number: selDoc.number, valid_from: selDoc.valid_from || '', valid_until: selDoc.valid_until || '', notes: selDoc.notes, notes_ru: selDoc.notes_ru, pinned: selDoc.pinned }); setView('edit') }} style={{ flex: 1, фон: '#eff6ff', граница: '1.5px Solid #93c5fd', borderRadius: 10, отступ: 12, FontSize: 13, FontWeight: 600, курсор: 'pointer', цвет: '#1d4ed8' }}>✏️ {t('Edit', 'Зминити', 'Зминити')</button>
-              <button onClick={() => handleTogglePin(selDoc)} style={{ flex: 1, background: selDoc.pinned ? '#fef9c3' : C.surface, color: selDoc.pinned ? '#854d0e' : C.textSub, border: `1.5px solid ${selDoc.pinned ? '#fde047' : C.border}`, borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📌 {selDoc.pinned ? t('Открепить', 'Відкріпити', 'Відкріпити') : t('Закрепить', 'Закріпити', 'Закріпити')</button>
+              <button onClick={() => { setDocForm({ category: selDoc.category, title: selDoc.title, title_ru: selDoc.title_ru, number: selDoc.number, valid_from: selDoc.valid_from || '', valid_until: selDoc.valid_until || '', notes: selDoc.notes, notes_ru: selDoc.notes_ru, pinned: selDoc.pinned }); setView('edit') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>✏️ {t('Edit', 'Змінити', 'Змінити')}</button>
+              <button onClick={() => handleTogglePin(selDoc)} style={{ flex: 1, background: selDoc.pinned ? '#fef9c3' : C.surface, color: selDoc.pinned ? '#854d0e' : C.textSub, border: `1.5px solid ${selDoc.pinned ? '#fde047' : C.border}`, borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📌 {selDoc.pinned ? t('Unpin', 'Відкріпити', 'Відкріпити') : t('Pin', 'Закріпити', 'Закріпити')}</button>
               <button onClick={() => setConfirmDel(selDoc.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑</button>
             </div>
 
-            {/* ── ФОТОГРАФИИ ДОКУМЕНТОВ ── */}
+            {/* ── DOCUMENT PHOTOS ── */}
             <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                📸 {t('Фотографии документов', 'Фотодокумент', 'Фотодокумент')}
+                📸 {t('Document Photos', 'Фото документа', 'Фото документа')}
                 <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>
                   {(selDoc.document_photos || []).length}
                 </span>
               </div>
 
-              {/* Фотосетка */}
+              {/* Photo grid */}
               {(selDoc.document_photos || []).length > 0 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                   {(selDoc.document_photos || []).map(ph => (
@@ -1081,7 +1081,7 @@ export default function AppContent() {
                         style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 10, cursor: 'pointer', border: `1px solid ${C.border}` }}
                       />
                       <div style={{ fontSize: 11, color: C.textSub, marginTop: 4, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ph.label}</div>
-                      <кнопка
+                      <button
                         onClick={() => handleDeleteDocPhoto(ph.id)}
                         style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 99, width: 26, height: 26, color: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                         ×
@@ -1091,35 +1091,35 @@ export default function AppContent() {
                 </div>
               )}
 
-              {/* Добавить фото */}
+              {/* Add photo */}
               <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>
-                  {t('Добавить фото', 'Добавить фото', 'Добавить фото')}
+                  {t('Add photo', 'Додати фото', 'Додати фото')}
                 </div>
-                <ввод
-                  значение={docPhotoLabel}
+                <input
+                  value={docPhotoLabel}
                   onChange={e => setDocPhotoLabel(e.target.value)}
-                  Placeholder={t('Этикетка (напр. Лицевая сторона)', 'Підпис (напр. Лицьова сторона)', 'Підпис (напр. Лицьова сторона)')}
+                  placeholder={t('Label (e.g. Front side)', 'Підпис (напр. Лицьова сторона)', 'Підпис (напр. Лицьова сторона)')}
                   style={{ ...inputStyle, marginBottom: 10, fontSize: 13 }}
                 />
 
 
 
-                {сохранение ? (
-                  <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Загрузка...', 'Завантаження...', 'Завантаження...')</div>
+                {saving ? (
+                  <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <кнопка
+                    <button
                       onClick={() => docCameraRef.current?.click()}
                       style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>📷</span>
-                      <span>{t('Камера', 'Камера', 'Камера')</span>
+                      <span>{t('Camera', 'Камера', 'Камера')}</span>
                     </button>
-                    <кнопка
+                    <button
                       onClick={() => docPhotoRef.current?.click()}
                       style={{ background: '#eff6ff', color: C.blue, border: `1.5px solid #93c5fd`, borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>🖼️</span>
-                      <span>{t('Галерея', 'Галерея', 'Галерея')</span>
+                      <span>{t('Gallery', 'Галерея', 'Галерея')}</span>
                     </button>
                   </div>
                 )}
@@ -1127,36 +1127,36 @@ export default function AppContent() {
             </div>
 
             {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' }}>
-              <div style={{ FontSize: 14, Color: '#991b1b', FontWeight: 700, MarginBottom: 14 }}>{t('Удалить этот документ?', 'Удалить этот документ?')</div>
+              <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this document?', 'Удалить этот документ?')}</div>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px Solid ${C.border}`, borderRadius: 8, отступ: 10, курсор: 'pointer', FontSize: 13 }}>{t('Cancel', 'Скачать', 'Скачать')</button>
-                <button onClick={() => handleDeleteDoc(selDoc.id)} style={{ flex: 1, фон: C.red, граница: 'none', borderRadius: 8, отступ: 10, курсор: 'pointer', цвет: '#fff', FontSize: 13, FontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')</button>
+                <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
+                <button onClick={() => handleDeleteDoc(selDoc.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
               </div>
             </div>}
           </>)
         })()}
 
-        {/* ══ ДОБАВИТЬ ДОКУМЕНТ ══ */}
+        {/* ══ ADD DOC ══ */}
         {tab === 'docs' && view === 'add' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>➕ {t('Новый документ', 'Новый документ', 'Новый документ')</div>
-            <FField label={t('Категория', 'Категория', 'Категория')}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>➕ {t('New Document', 'Новий документ', 'Новий документ')}</div>
+            <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
               </div>
             </FField>
-            <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} placeholder="eg CSCS Green Card" style={inputStyle} /></FField>
+            <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. CSCS Green Card" style={inputStyle} /></FField>
             <FField label={t('Title (RU)', 'Название (RU)')}><input value={docForm.title_ru} onChange={e => setDocForm(f => ({ ...f, title_ru: e.target.value }))} placeholder="напр. Карта CSCS" style={inputStyle} /></FField>
-            <FField label={t('Number / Code', 'Номер / Код', 'Номер / Код')}><input value={docForm.number} onChange={e => setDocForm(f => ({ ...f, number: e.target.value }))} placeholder="eg WZL F8D 7A4" style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16 }} /></FField>
+            <FField label={t('Number / Code', 'Номер / Код', 'Номер / Код')}><input value={docForm.number} onChange={e => setDocForm(f => ({ ...f, number: e.target.value }))} placeholder="e.g. WZL F8D 7A4" style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16 }} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
               <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, Notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
-              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Закрепить этот документ', 'Закрепить')}</span>
+              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pin this document', 'Закрепить')}</span>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => switchTab('docs')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
@@ -1165,11 +1165,11 @@ export default function AppContent() {
           </div>
         )}
 
-        {/* ══ РЕДАКТИРОВАТЬ ДОКУМЕНТ ══ */}
+        {/* ══ EDIT DOC ══ */}
         {tab === 'docs' && view === 'edit' && selDoc && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>✏️ {t('Редактировать документ', 'Редактировать документ', 'Редактировать документ')</div>
-            <FField label={t('Категория', 'Категория', 'Категория')}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Document', 'Редагувати документ', 'Редагувати документ')}</div>
+            <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
               </div>
@@ -1181,27 +1181,27 @@ export default function AppContent() {
               <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
               <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, Notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
               <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pinned', 'Закреплён')}</span>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setView('detail')} style={{ flex: 1, фон: C.bg, граница: `1.5px Solid ${C.border}`, borderRadius: 10, отступ: 14, FontSize: 14, курсор: 'указатель', цвет: C.textSub, FontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')</button>
+              <button onClick={() => setView('detail')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleUpdateDoc} disabled={!docForm.title || saving} style={{ flex: 2, background: docForm.title ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: docForm.title ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{saving ? '⏳' : t('Save Changes', 'Зберегти', 'Зберегти')}</button>
             </div>
           </div>
         )}
 
-        {/* ══════════ Вкладка паспорта ══════════ */}
+        {/* ══════════ PASSPORT TAB ══════════ */}
         {tab === 'passport' && view === 'list' && (
           <>
             {passports.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
                 <div style={{ fontSize: 50, marginBottom: 12 }}>📘</div>
-                <div style={{ FontSize: 15, FontWeight: 600, MarginBottom: 6 }}>{t('Паспорти не добавлены', 'Паспорти не додані', 'Паспорти не додані')</div>
-                <div style={{ fontSize: 13, MarginBottom: 20 }}>{t('Добавить паспорт с фотографиями ключевых страниц', 'Добавь паспорт с фото страниц')</div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>{t('No passports added', 'Паспорти не додані', 'Паспорти не додані')}</div>
+                <div style={{ fontSize: 13, marginBottom: 20 }}>{t('Add passport with photos of key pages', 'Добавь паспорт с фото страниц')}</div>
               </div>
             ) : (
               passports.map(p => (
@@ -1225,43 +1225,43 @@ export default function AppContent() {
           </>
         )}
 
-        {/* ══ ДОБАВИТЬ ПАСПОРТ ══ */}
+        {/* ══ ADD PASSPORT ══ */}
         {tab === 'passport' && view === 'addPassport' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>📘 {t('Добавить паспорт', 'Добавить паспорт', 'Добавить паспорт')</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>📘 {t('Add Passport', 'Додати паспорт', 'Додати паспорт')}</div>
             <FField label={t('Type', 'Тип')}>
               <select value={passForm.type} onChange={e => setPassForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
-                {['Украинский паспорт', 'Украинское удостоверение личности', 'Карта BRP Великобритании', 'Паспорт Великобритании', 'Паспорт ЕС', 'Другое'].map(o => <option key={o} value={o}>{o}</option>)}
+                {['Ukrainian Passport', 'Ukrainian ID Card', 'UK BRP Card', 'UK Passport', 'EU Passport', 'Other'].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </FField>
             <FField label={t('Number', 'Номер')}><input value={passForm.number} onChange={e => setPassForm(f => ({ ...f, number: e.target.value }))} placeholder="AA123456" style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16, letterSpacing: '0.06em' }} /></FField>
-            <FField label={t('Выдано', 'Ким виданий', 'Ким виданий')}><input value={passForm.issued_by} onChange={e => setPassForm(f => ({ ...f, Issued_by: e.target.value }))} Placeholder={t('МВД', 'МВД Украины')} style={inputStyle} /></FField>
+            <FField label={t('Issued by', 'Ким виданий', 'Ким виданий')}><input value={passForm.issued_by} onChange={e => setPassForm(f => ({ ...f, issued_by: e.target.value }))} placeholder={t('Ministry of Internal Affairs', 'МВД Украины')} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FField label={t('Issued', 'Дата видачі', 'Дата видачі')}><input type="date" value={passForm.issued_date} onChange={e => setPassForm(f => ({ ...f, Issued_date: e.target.value }))} style={inputStyle} /></FField>
-              <FField label={t('Expires', 'Срок действия', 'Срок действия')}><input type="date" value={passForm.expiry_date} onChange={e => setPassForm(f => ({ ...f, expiry_date: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('Issued', 'Дата видачі', 'Дата видачі')}><input type="date" value={passForm.issued_date} onChange={e => setPassForm(f => ({ ...f, issued_date: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('Expires', 'Термін дії', 'Термін дії')}><input type="date" value={passForm.expiry_date} onChange={e => setPassForm(f => ({ ...f, expiry_date: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={passForm.notes} onChange={e => setPassForm(f => ({ ...f, Notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={passForm.notes} onChange={e => setPassForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => switchTab('passport')} style={{ flex: 1, background: C.bg, border: `1.5px Solid ${C.border}`, borderRadius: 10, отступ: 14, FontSize: 14, курсор: 'pointer', цвет: C.textSub, FontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')</button>
+              <button onClick={() => switchTab('passport')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleAddPassport} disabled={!passForm.number || saving} style={{ flex: 2, background: passForm.number ? '#0369a1' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: passForm.number ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{saving ? '⏳' : t('Save', 'Зберегти', 'Зберегти')}</button>
             </div>
           </div>
         )}
 
-        {/* ══ ДАННЫЕ ПАСПОРТА ══ */}
+        {/* ══ PASSPORT DETAIL ══ */}
         {tab === 'passport' && view === 'passportDetail' && selPass && (
           <>
-            <button onClick={() => { setView('list'); setSelPass(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Назад', 'Назад', 'Назад')}</button>
+            <button onClick={() => { setView('list'); setSelPass(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
             <div style={{ background: 'linear-gradient(135deg, #0369a1, #0284c7)', borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📘</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{selPass.type}</div>
               <div style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 800, letterSpacing: '0.1em', marginTop: 4, opacity: 0.9 }}>{selPass.number}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12 }}>
-              {selPass.issued_by && <DRow label={t('Выдано', 'Ким виданий', 'Ким виданий')}>{selPass.issued_by</DRow>}
-              {selPass.issued_date && <DRow label={t('Issued', 'Дата видачі', 'Дата видачі')}>{formatDate(selPass.issued_date)</DRow>}
+              {selPass.issued_by   && <DRow label={t('Issued by', 'Ким виданий', 'Ким виданий')}>{selPass.issued_by}</DRow>}
+              {selPass.issued_date && <DRow label={t('Issued', 'Дата видачі', 'Дата видачі')}>{formatDate(selPass.issued_date)}</DRow>}
               {selPass.expiry_date && <DRow label={t('Expires', 'Срок')}><span>{formatDate(selPass.expiry_date)}</span><ExpiryBadge d={selPass.expiry_date} /></DRow>}
-              <DRow label={t('Номер паспорта', 'Номер паспорта', 'Номер паспорта')}>
+              <DRow label={t('Passport number', 'Номер паспорта', 'Номер паспорта')}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 800, color: C.navy }}>{selPass.number}</span>
                   <CopyBtn value={selPass.number} lang={lang} />
@@ -1272,9 +1272,9 @@ export default function AppContent() {
               </DRow>
             </div>
 
-            {/* Фотографии */}
+            {/* Photos */}
             <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
-              <div style={{ FontSize: 14, FontWeight: 700, Color: C.navy, MarginBottom: 14 }}>📸 {t('Фотографии на документ', 'Фото магазин', 'Фото магазин')} ({selPass.passport_photos.length})</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14 }}>📸 {t('Document Photos', 'Фото сторінок', 'Фото сторінок')} ({selPass.passport_photos.length})</div>
               {selPass.passport_photos.length > 0 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
                   {selPass.passport_photos.map(ph => (
@@ -1287,53 +1287,53 @@ export default function AppContent() {
                 </div>
               )}
               <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
-                <div style={{ FontSize: 12, FontWeight: 600, Color: C.textSub, MarginBottom: 8 }}>{t('Добавить фото страницы', 'Добавить фото стопки', 'Добавить фото стопки')</div>
-                <input value={photoLabel} onChange={e => setPhotoLabel(e.target.value)} Placeholder={t('Label (eg Main page)', 'Подпись (напр. Главная страница)')} style={{ ...inputStyle, MarginBottom: 8, FontSize: 13 }} />
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>{t('Add page photo', 'Додати фото сторінки', 'Додати фото сторінки')}</div>
+                <input value={photoLabel} onChange={e => setPhotoLabel(e.target.value)} placeholder={t('Label (e.g. Main page)', 'Подпись (напр. Главная страница)')} style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
 
 
-                {сохранение ? (
-                  <div style={{ textAlign: 'center', padding: '12px 0', color: C.muted, FontSize: 13 }}>⏳ {t('Загрузка...', 'Завантаження...', 'Завантаження...')</div>
+                {saving ? (
+                  <div style={{ textAlign: 'center', padding: '12px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <button onClick={() => passCameraRef.current?.click()} style={{ background: '#0369a1', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>📷</span>
-                      <span>{t('Камера', 'Камера', 'Камера')</span>
+                      <span>{t('Camera', 'Камера', 'Камера')}</span>
                     </button>
                     <button onClick={() => passPhotoRef.current?.click()} style={{ background: '#e0f2fe', color: '#0369a1', border: '1.5px solid #7dd3fc', borderRadius: 10, padding: '13px 8px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 24 }}>🖼️</span>
-                      <span>{t('Галерея', 'Галерея', 'Галерея')</span>
+                      <span>{t('Gallery', 'Галерея', 'Галерея')}</span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
 
-            <button onClick={() => setConfirmDel(selPass.id)} style={{ width: '100%', фон: '#fee2e2', граница: '1.5px Solid #fca5a5', borderRadius: 10, отступ: 12, FontSize: 13, FontWeight: 600, курсор: 'pointer', цвет: C.red }}>🗑 {t('Удалить паспорт', 'Вид паспорта', 'Вид паспорта')</button>
+            <button onClick={() => setConfirmDel(selPass.id)} style={{ width: '100%', background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑 {t('Delete Passport', 'Видалити паспорт', 'Видалити паспорт')}</button>
             {confirmDel === selPass.id && (
               <div style={{ background: '#fee2e2', borderRadius: 12, padding: 16, marginTop: 10, textAlign: 'center' }}>
-                <div style={{ FontSize: 14, color: '#991b1b', FontWeight: 700, MarginBottom: 12 }}>{t('Удалить этот паспорт?', 'Удалить этот паспорт?')</div>
+                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 12 }}>{t('Delete this passport?', 'Удалить этот паспорт?')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px Solid ${C.border}`, borderRadius: 8, отступ: 10, курсор: 'pointer', FontSize: 13 }}>{t('Cancel', 'Скачать', 'Скачать')</button>
-                  <button onClick={() => handleDeletePassport(selPass.id)} style={{ flex: 1, фон: C.red, граница: 'none', borderRadius: 8, отступ: 10, курсор: 'pointer', цвет: '#fff', FontSize: 13, FontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')</button>
+                  <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
+                  <button onClick={() => handleDeletePassport(selPass.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
                 </div>
               </div>
             )}
           </>
         )}
 
-        {/* ══════════ ВКЛАДКА ЗАДАЧ ══════════ */}
-        {/* ══════════ Вкладка «Адресная книга» ══════════ */}
+        {/* ══════════ TODO TAB ══════════ */}
+        {/* ══════════ ADDRESS BOOK TAB ══════════ */}
         {tab === 'address' && view === 'list' && (
           <>
-            {/* Герой домашнего адреса */}
+            {/* Home address hero */}
             {homeAddr ? (
               <div style={{ background: `linear-gradient(135deg, ${homeAddr.color}, ${homeAddr.color}cc)`, borderRadius: 20, padding: '22px 22px 18px', marginBottom: 14, color: '#fff', cursor: 'pointer' }}
                 onClick={() => { setSelAddr(homeAddr); setView('detail') }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                   <span style={{ fontSize: 28 }}>🏠</span>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, LetterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0,7 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')</div>
-                    <div style={{ FontSize: 16, FontWeight: 700 }}>{lang !== 'en' && homeAddr.label_ru ? homeAddr.label_ru : homeAddr.label</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.7 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>{lang !== 'en' && homeAddr.label_ru ? homeAddr.label_ru : homeAddr.label}</div>
                   </div>
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.9 }}>
@@ -1341,7 +1341,7 @@ export default function AppContent() {
                   {[homeAddr.city, homeAddr.postcode].filter(Boolean).join(', ')}<br />
                   {homeAddr.country}
                 </div>
-                {/* Кнопки "Поделиться" */}
+                {/* Share buttons */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                   <button onClick={e => { e.stopPropagation(); shareAddress(homeAddr, 'whatsapp') }} style={{ flex: 1, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, padding: '9px 0', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                     <span style={{ fontSize: 16 }}>💬</span> WhatsApp
@@ -1350,22 +1350,22 @@ export default function AppContent() {
                     <span style={{ fontSize: 16 }}>✈️</span> Telegram
                   </button>
                   <button onClick={e => { e.stopPropagation(); copyAddress(homeAddr) }} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 10, padding: '9px 12px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                    ⎘ {t('Копировать', 'Скопировать', 'Скопировать')}
+                    ⎘ {t('Copy', 'Скопіювати', 'Скопіювати')}
                   </button>
                 </div>
               </div>
             ) : (
               <div style={{ background: C.surface, borderRadius: 16, padding: '20px 18px', marginBottom: 14, border: `2px dashed ${C.border}`, textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
-                <div style={{ FontSize: 14, FontWeight: 600, Color: C.navy, MarginBottom: 4 }}>{t('Не задан домашний адрес', 'Адрес прописки не добавлен')</div>
-                <div style={{ fontSize: 12, color: C.muted }}>{t('Добавьте адрес и пометьте его как домашний', 'Добавьте адрес и удалите его как главный')</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.navy, marginBottom: 4 }}>{t('No home address set', 'Адрес прописки не добавлен')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Add an address and mark it as home', 'Добавь адрес и отметь его как главный')}</div>
               </div>
             )}
 
-            {/* Другие адреса */}
+            {/* Other addresses */}
             {addresses.filter(a => !a.is_home).length > 0 && (
               <>
-                <SLabel>📌 {t('Сохраненные адреса', 'Важные адреса', 'Важные адреса')</SLabel>
+                <SLabel>📌 {t('Saved Addresses', 'Важливі адреси', 'Важливі адреси')}</SLabel>
                 {addresses.filter(a => !a.is_home).map(addr => (
                   <div key={addr.id} style={{ background: C.surface, borderRadius: 14, marginBottom: 8, padding: '14px 16px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${addr.color}` }}
                     onClick={() => { setSelAddr(addr); setView('detail') }}>
@@ -1391,7 +1391,7 @@ export default function AppContent() {
             {addresses.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: C.muted }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📍</div>
-                <div style={{ fontSize: 14 }}>{t('Адресов пока нет', 'Немає адрес', 'Немає адрес')</div>
+                <div style={{ fontSize: 14 }}>{t('No addresses yet', 'Немає адрес', 'Немає адрес')}</div>
               </div>
             )}
 
@@ -1399,17 +1399,17 @@ export default function AppContent() {
           </>
         )}
 
-        {/* ══ АДРЕСНЫЕ ДАННЫЕ ══ */}
+        {/* ══ ADDRESS DETAIL ══ */}
         {tab === 'address' && view === 'detail' && selAddr && (
           <>
-            <button onClick={() => { setView('list'); setSelAddr(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Назад', 'Назад', 'Назад')}</button>
+            <button onClick={() => { setView('list'); setSelAddr(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
 
-            {/* Герой */}
+            {/* Hero */}
             <div style={{ background: `linear-gradient(135deg, ${selAddr.color}, ${selAddr.color}bb)`, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 32 }}>{selAddr.is_home ? '🏠' : '📍'}</span>
                 <div>
-                  {selAddr.is_home && <div style={{ fontSize: 10, fontWeight: 700, LetterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.7, MarginBottom: 2 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')</div>}
+                  {selAddr.is_home && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 2 }}>{t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>}
                   <div style={{ fontSize: 20, fontWeight: 700 }}>{lang !== 'en' && selAddr.label_ru ? selAddr.label_ru : selAddr.label}</div>
                 </div>
               </div>
@@ -1421,10 +1421,10 @@ export default function AppContent() {
               </div>
             </div>
 
-            {/* Подробности */}
+            {/* Details */}
             <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '18px 22px', marginBottom: 12 }}>
-              {selAddr.notes && <DRow label={t('Notes', 'Нотатки', 'Нотатки')}><span style={{ fontSize: 13, color: C.textSub }}>{selAddr.notes</span></DRow>}
-              <DRow label={t('Полный адрес', 'Повна адрес', 'Повна адрес')}>
+              {selAddr.notes && <DRow label={t('Notes', 'Нотатки', 'Нотатки')}><span style={{ fontSize: 13, color: C.textSub }}>{selAddr.notes}</span></DRow>}
+              <DRow label={t('Full address', 'Повна адреса', 'Повна адреса')}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                   <span style={{ fontSize: 13, color: C.textSub, flex: 1, lineHeight: 1.5 }}>
                     {[selAddr.line1, selAddr.line2, selAddr.city, selAddr.postcode, selAddr.country].filter(Boolean).join(', ')}
@@ -1434,9 +1434,9 @@ export default function AppContent() {
               </DRow>
             </div>
 
-            {/* Делиться */}
+            {/* Share */}
             <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 12 }}>
-              <div style={{ FontSize: 13, FontWeight: 700, Color: C.navy, MarginBottom: 12 }}>📤 {t('Поделиться адресом', 'Поділитися адресою', 'Поділитися адресою')</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>📤 {t('Share Address', 'Поділитися адресою', 'Поділитися адресою')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <button onClick={() => shareAddress(selAddr, 'whatsapp')} style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 28 }}>💬</span>
@@ -1444,31 +1444,31 @@ export default function AppContent() {
                 </button>
                 <button onClick={() => shareAddress(selAddr, 'telegram')} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 12, padding: '14px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 28 }}>✈️</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Телеграм</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Telegram</span>
                 </button>
               </div>
             </div>
 
-            {/* Действия */}
+            {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
               <button onClick={() => { setAddrForm({ label: selAddr.label, label_ru: selAddr.label_ru, line1: selAddr.line1, line2: selAddr.line2, city: selAddr.city, postcode: selAddr.postcode, country: selAddr.country, notes: selAddr.notes, is_home: selAddr.is_home, color: selAddr.color }); setView('editAddress') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>
-                ✏️ {t('Редактировать', 'Изменить', 'Изменить')}
+                ✏️ {t('Edit', 'Змінити', 'Змінити')}
               </button>
               {!selAddr.is_home && (
                 <button onClick={() => handleSetHome(selAddr)} style={{ flex: 1, background: '#fef9c3', border: '1.5px solid #fde047', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#854d0e' }}>
-                  🏠 {t('Установить как домашний', 'Зробить головним', 'Зробить головним')}
+                  🏠 {t('Set as Home', 'Зробити головним', 'Зробити головним')}
                 </button>
               )}
               <button onClick={() => setConfirmDel(selAddr.id)} style={{ flex: 1, background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>
-                🗑 {t('Удалить', 'Видалити', 'Видалити')}
+                🗑 {t('Delete', 'Видалити', 'Видалити')}
               </button>
             </div>
 
             {confirmDel === selAddr.id && (
               <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' }}>
-                <div style={{ FontSize: 14, Color: '#991b1b', FontWeight: 700, MarginBottom: 14 }}>{t('Удалить этот адрес?', 'Удалить этот адрес?')</div>
+                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this address?', 'Удалить этот адрес?')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px Solid ${C.border}`, borderRadius: 8, отступ: 10, курсор: 'pointer', FontSize: 13 }}>{t('Cancel', 'Скачать', 'Скачать')</button>
+                  <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
                   <button onClick={() => handleDeleteAddress(selAddr.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
                 </div>
               </div>
@@ -1476,13 +1476,13 @@ export default function AppContent() {
           </>
         )}
 
-        {/* ══ ДОБАВИТЬ АДРЕС ══ */}
+        {/* ══ ADD ADDRESS ══ */}
         {tab === 'address' && view === 'add' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>📍 {t('Новый адрес', 'Новый адрес')</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>📍 {t('New Address', 'Нова адреса', 'Нова адреса')}</div>
 
-            {/* Выбор цвета */}
-            <FField label={t('Цвет', 'Колір', 'Колір')}>
+            {/* Color picker */}
+            <FField label={t('Colour', 'Колір', 'Колір')}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ADDR_COLORS.map(col => (
                   <button key={col} onClick={() => setAddrForm(f => ({ ...f, color: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, border: addrForm.color === col ? '3px solid #1a202c' : '2px solid transparent', cursor: 'pointer', boxShadow: addrForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
@@ -1490,41 +1490,41 @@ export default function AppContent() {
               </div>
             </FField>
 
-            <FField label={t('Label (EN)', 'Название (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} placeholder="eg Oxford Home, GP Surgery" style={inputStyle} /></FField>
-            <FField label={t('Label (RU)', 'Название (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} Placeholder="напр. Дом в Оксфорде, Врач" style={inputStyle} /></FField>
-            <FField label={t('Address line 1', 'Адрес строка 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} placeholder="eg 12 Rose Street" style={inputStyle} /></FField>
-            <FField label={t('Адресная строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} Placeholder={t('Ровная, площадь (необязательно)', 'Квартира, район (необязательно)')} style={inputStyle} /></FField>
+            <FField label={t('Label (EN)', 'Название (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} placeholder="e.g. Oxford Home, GP Surgery" style={inputStyle} /></FField>
+            <FField label={t('Label (RU)', 'Название (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} placeholder="напр. Дом в Оксфорде, Врач" style={inputStyle} /></FField>
+            <FField label={t('Address line 1', 'Адрес строка 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} placeholder="e.g. 12 Rose Street" style={inputStyle} /></FField>
+            <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} placeholder={t('Flat, area (optional)', 'Квартира, район (необязательно)')} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('City', 'Місто', 'Місто')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} placeholder="Oxford" style={inputStyle} /></FField>
-              <FField label={t('Почтовый индекс', 'Почтовый индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
+              <FField label={t('Postcode', 'Почтовый индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
             </div>
             <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} placeholder="United Kingdom" style={inputStyle} /></FField>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, Notes: e.target.value }))} rows={2} Placeholder={t('например, возле автобусной остановки, звонок 2', '. около остановки, звонок 2')} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('e.g. near bus stop, ring bell 2', 'напр. возле остановки, звонок 2')} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
 
-            {/* Переключатель "Домой" */}
+            {/* Home toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
               onClick={() => setAddrForm(f => ({ ...f, is_home: !f.is_home }))}>
               <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
               <div>
-                <div style={{ FontSize: 14, FontWeight: 600, цвет: addrForm.is_home? '#854d0e' : C.text }}>🏠 {t('Установить как домашний адрес', 'Сделать адресом прописки')</div>
-                <div style={{ fontSize: 12, color: C.muted }}>{t('Ваш основной зарегистрированный адрес в Великобритании', 'Главный зарегистрированный адрес в Великобритании')</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Set as Home Address', 'Сделать адресом прописки')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address in UK', 'Главный зарегистрированный адрес в UK')}</div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => switchTab('address')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleAddAddress} disabled={!addrForm.label || !addrForm.line1 || saving} style={{ flex: 2, background: addrForm.label && addrForm.line1 ? '#2e7d32' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: addrForm.label && addrForm.line1 ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>
-                {сохранение? '⏳' : t('Сохранить адрес', 'Сохранить адрес')}
+                {saving ? '⏳' : t('Save Address', 'Сохранить адрес')}
               </button>
             </div>
           </div>
         )}
 
-        {/* ══ АДРЕС РЕДАКТИРОВАНИЯ ══ */}
+        {/* ══ EDIT ADDRESS ══ */}
         {tab === 'address' && view === 'editAddress' && selAddr && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>✏️ {t('Редактировать адрес', 'Редактировать адрес', 'Редактировать адрес')</div>
-            <FField label={t('Цвет', 'Колір', 'Колір')}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Address', 'Редагувати адресу', 'Редагувати адресу')}</div>
+            <FField label={t('Colour', 'Колір', 'Колір')}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ADDR_COLORS.map(col => (
                   <button key={col} onClick={() => setAddrForm(f => ({ ...f, color: col }))} style={{ width: 36, height: 36, borderRadius: 8, background: col, border: addrForm.color === col ? '3px solid #1a202c' : '2px solid transparent', cursor: 'pointer', boxShadow: addrForm.color === col ? '0 0 0 2px #fff inset' : 'none' }} />
@@ -1537,49 +1537,49 @@ export default function AppContent() {
             <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('City', 'Місто', 'Місто')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} style={inputStyle} /></FField>
-              <FField label={t('Почтовый индекс', 'Индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
+              <FField label={t('Postcode', 'Индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
             </div>
-            <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, Country: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, Notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
               onClick={() => setAddrForm(f => ({ ...f, is_home: !f.is_home }))}>
               <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
               <div>
-                <div style={{ FontSize: 14, FontWeight: 600, цвет: addrForm.is_home? '#854d0e' : C.text }}>🏠 {t('Домашний адрес', 'Адреса прописки', 'Адреса прописки')</div>
-                <div style={{ fontSize: 12, color: C.muted }}>{t('Ваш основной зарегистрированный адрес', 'Главный зарегистрированный адрес')</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address', 'Главный зарегистрированный адрес')}</div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setView('detail')} style={{ flex: 1, фон: C.bg, граница: `1.5px Solid ${C.border}`, borderRadius: 10, отступ: 14, FontSize: 14, курсор: 'указатель', цвет: C.textSub, FontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')</button>
+              <button onClick={() => setView('detail')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleUpdateAddress} disabled={saving} style={{ flex: 2, background: saving ? '#94a3b8' : '#2e7d32', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: '#fff', fontWeight: 700 }}>
-                {сохранение? '⏳' : t('Сохранить изменения', 'Сохранить изменения')}
+                {saving ? '⏳' : t('Save Changes', 'Сохранить изменения')}
               </button>
             </div>
           </div>
         )}
 
 
-        {/* ══════════════════ ВКЛАДКА ВОЗОБНОВИТЬ ═══════════════════ */}
+        {/* ══════════════════ RESUME TAB ══════════════════ */}
         {tab === 'resume' && view === 'list' && (
           <>
             {resumes.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '50px 20px', color: C.muted }}>
                 <div style={{ fontSize: 52, marginBottom: 12 }}>📝</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: C.navy, marginBottom: 6 }}>
-                  {t('Резюме пока нет', 'Еще немає резюме', 'Еще немає резюме')}
+                  {t('No CVs yet', 'Ще немає CV', 'Ще немає CV')}
                 </div>
                 <div style={{ fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
-                  {t('Сохраните несколько резюме для разных должностей и компаний', 'Сохраните резюме для различных должностей и компаний', 'Сохраните резюме для различных должностей и компаний')}
+                  {t('Store multiple CVs for different roles and companies', 'Зберігайте CV для різних посад та компаній', 'Зберігайте CV для різних посад та компаній')}
                 </div>
               </div>
             ) : (
               <>
-                {/* Панель статистики */}
+                {/* Stats bar */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
                   {[
-                    { label: t('Total', 'Всого', 'Всого'), val: summary.length, color: C.navy },
-                    { label: t('Готово', 'Готові', 'Готові'), val: summary.filter(r=>r.status==='ready').length, color: '#2e7d32' },
-                    { label: t('Отправлено', 'Надіслані', 'Надіслані'), val: summary.filter(r=>r.status==='sent'||r.status==='interview').length, color: '#1d4ed8' },
+                    { label: t('Total', 'Всього', 'Всього'), val: resumes.length, color: C.navy },
+                    { label: t('Ready', 'Готові', 'Готові'), val: resumes.filter(r=>r.status==='ready').length, color: '#2e7d32' },
+                    { label: t('Sent', 'Надіслані', 'Надіслані'), val: resumes.filter(r=>r.status==='sent'||r.status==='interview').length, color: '#1d4ed8' },
                   ].map((s,i) => (
                     <div key={i} style={{ background: C.surface, borderRadius: 12, padding: '10px 8px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                       <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
@@ -1589,11 +1589,11 @@ export default function AppContent() {
                 </div>
 
                 {resumes.filter(r=>r.pinned).length > 0 && (
-                  <SLabel>📌 {t('Закреплено', 'Закріплені', 'Закріплені')</SLabel>
+                  <SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')}</SLabel>
                 )}
                 {[...resumes.filter(r=>r.pinned), ...resumes.filter(r=>!r.pinned)].map(r => {
                   const st = resumeStatus(r.status)
-                  возвращаться (
+                  return (
                     <div key={r.id} onClick={() => { setSelResume(r); setView('resumeDetail') }}
                       style={{ background: C.surface, borderRadius: 14, marginBottom: 10, padding: '14px 16px',
                         cursor: 'pointer', boxShadow: '0 1px 5px rgba(0,0,0,0.06)',
@@ -1608,13 +1608,13 @@ export default function AppContent() {
                             {r.pinned && <span style={{ fontSize: 11 }}>📌</span>}
                             <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{r.title}</span>
                             <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
-                              {язык === 'Великобритания' ? st.uk: lang === 'ru'? st.ru : st.en}
+                              {lang === 'uk' ? st.uk : lang === 'ru' ? st.ru : st.en}
                             </span>
                           </div>
                           {r.direction && <div style={{ fontSize: 12, color: C.blue, fontWeight: 600 }}>🎯 {r.direction}</div>}
                           {r.company && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>🏢 {r.company}</div>}
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 4, display: 'flex', gap: 10 }}>
-                            <span>{t('Обновлено', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)</span>
+                            <span>{t('Updated', 'Оновлено', 'Оновлено')} {formatDate(r.updated_at)}</span>
                             {((r).resume_files?.length || 0) > 0 && (
                               <span>📎 {(r).resume_files.length}</span>
                             )}
@@ -1634,17 +1634,17 @@ export default function AppContent() {
           </>
         )}
 
-        {/* ══ ПОДРОБНОСТИ РЕЗЮМЕ ══ */}
+        {/* ══ CV DETAIL ══ */}
         {tab === 'resume' && view === 'resumeDetail' && selResume && (() => {
           const st = resumeStatus(selResume.status)
-          возвращаться (
+          return (
             <>
               <button onClick={() => { setView('list'); setSelResume(null) }}
                 style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                ← {t('Назад', 'Назад', 'Назад')}
+                ← {t('Back', 'Назад', 'Назад')}
               </button>
 
-              {/* Герой */}
+              {/* Hero */}
               <div style={{ background: `linear-gradient(135deg, ${selResume.color}, ${selResume.color}cc)`,
                 borderRadius: 20, padding: '24px 22px 20px', marginBottom: 3, color: '#fff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1655,20 +1655,20 @@ export default function AppContent() {
                   </div>
                   <span style={{ background: st.bg, color: st.color, fontSize: 12, fontWeight: 700,
                     padding: '4px 10px', borderRadius: 20, flexShrink: 0, marginLeft: 10 }}>
-                    {язык === 'Великобритания' ? st.uk: lang === 'ru'? st.ru : st.en}
+                    {lang === 'uk' ? st.uk : lang === 'ru' ? st.ru : st.en}
                   </span>
                 </div>
               </div>
 
-              {/* Содержание */}
+              {/* Content */}
               <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12 }}>
                 {selResume.summary && (
-                  <DRow label={t('Обо мне', 'Про меня', 'Про меня')}>
+                  <DRow label={t('About me', 'Про мене', 'Про мене')}>
                     <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{selResume.summary}</span>
                   </DRow>
                 )}
                 {selResume.skills && (
-                  <DRow label={t('Ключевые навыки', 'Ключевые навыки', 'Ключевые навыки')}>
+                  <DRow label={t('Key Skills', 'Ключові навички', 'Ключові навички')}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {selResume.skills.split(/[,;\n]+/).filter(Boolean).map((sk, i) => (
                         <span key={i} style={{ background: selResume.color + '18', color: selResume.color,
@@ -1680,33 +1680,33 @@ export default function AppContent() {
                   </DRow>
                 )}
                 {selResume.experience && (
-                  <DRow label={t('Опыт', 'Доступ роботы', 'Доступ роботы')}>
+                  <DRow label={t('Experience', 'Досвід роботи', 'Досвід роботи')}>
                     <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{selResume.experience}</span>
                   </DRow>
                 )}
                 {selResume.education && (
-                  <DRow label={t('Образование', 'Освіта', 'Освіта')}>
+                  <DRow label={t('Education', 'Освіта', 'Освіта')}>
                     <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{selResume.education}</span>
                   </DRow>
                 )}
                 {selResume.notes && (
-                  <DRow label={t('Заметки', 'Ноттки', 'Ноттки')}>
+                  <DRow label={t('Notes', 'Нотатки', 'Нотатки')}>
                     <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>{selResume.notes}</span>
                   </DRow>
                 )}
               </div>
 
-              {/* Кнопки действий */}
+              {/* Action buttons */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 <button onClick={() => {
                   setResumeForm({ title: selResume.title, direction: selResume.direction, company: selResume.company,
-                    статус: selResume.status, краткое описание: selResume.summary, навыки: selResume.skills,
-                    опыт: selResume.experience, образование: selResume.education, примечания: selResume.notes,
+                    status: selResume.status, summary: selResume.summary, skills: selResume.skills,
+                    experience: selResume.experience, education: selResume.education, notes: selResume.notes,
                     color: selResume.color, pinned: selResume.pinned })
                   setView('editResume')
                 }} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 12,
                   padding: 14, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#1d4ed8' }}>
-                  ✏️ {t('Редактировать', 'Редактировать', 'Редактировать')}
+                  ✏️ {t('Edit', 'Редагувати', 'Редагувати')}
                 </button>
                 <button onClick={() => {
                   copyResumeToClipboard(selResume)
@@ -1716,18 +1716,18 @@ export default function AppContent() {
                   border: `1.5px solid ${cvCopied ? '#86efac' : C.border}`,
                   borderRadius: 12, padding: 14, fontSize: 13, fontWeight: 700, cursor: 'pointer',
                   color: cvCopied ? '#166534' : C.textSub }}>
-                  {cvСкопировано? '✓ Скопировано!' : `⎘ ${t('Копировать резюме', 'Копировать резюме', 'Копировать резюме')}`}
+                  {cvCopied ? '✓ Copied!' : `⎘ ${t('Copy CV', 'Копіювати CV', 'Копіювати CV')}`}
                 </button>
               </div>
 
 
-              {/* ── ПРИКРЕПЛЕННЫЕ ФАЙЛЫ ── */}
+              {/* ── ATTACHED FILES ── */}
               <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>📎 {t('Прикрепленные файлы', 'Прикрепленные файлы', 'Прикрепленные файлы')} <span style={{ background: C.bg, borderRadius: 20, отступ: '2px 8px', FontSize: 12, цвет: C.muted, FontWeight: 600 }}>{((selResume).resume_files || []).length</span></span>
+                  <span>📎 {t('Attached Files', 'Прикріплені файли', 'Прикріплені файли')} <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{((selResume).resume_files || []).length}</span></span>
                 </div>
 
-                {/* Список файлов */}
+                {/* Files list */}
                 {((selResume).resume_files || []).length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     {((selResume).resume_files || []).map((rf: any) => (
@@ -1750,16 +1750,16 @@ export default function AppContent() {
                   </div>
                 )}
 
-                {/* Кнопка загрузки */}
+                {/* Upload button */}
                 {fileUploading ? (
-                  <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Загрузка...', 'Завантаження...', 'Завантаження...')</div>
+                  <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
                 ) : (
                   <button onClick={() => resumeFileRef.current?.click()} style={{ width: '100%', background: C.navy, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    📎 {t('Прикрепить файл (PDF, Word и т. д.)', 'Прикрепить файл (PDF, Word…)', 'Прикрепить файл (PDF, Word…)')}
+                    📎 {t('Attach File (PDF, Word, etc.)', 'Прикріпити файл (PDF, Word…)', 'Прикріпити файл (PDF, Word…)')}
                   </button>
                 )}
                 <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginTop: 8 }}>
-                  {t('Макс 5МБ · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT')}
+                  {t('Max 5MB · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT', 'Макс 5МБ · PDF, DOCX, DOC, TXT')}
                 </div>
               </div>
 
@@ -1769,22 +1769,22 @@ export default function AppContent() {
                   border: `1.5px solid ${selResume.pinned ? '#fde047' : C.border}`,
                   borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                   color: selResume.pinned ? '#854d0e' : C.textSub }}>
-                  📌 {selResume.pinned ? t('Открепить','Відкріпити','Відкріпити') : t('Закрепить','Закріпити','Закріпити')}
+                  📌 {selResume.pinned ? t('Unpin','Відкріпити','Відкріпити') : t('Pin','Закріпити','Закріпити')}
                 </button>
                 <button onClick={() => setConfirmDel(selResume.id)}
                   style={{ background: '#fff', border: '1.5px solid #fca5a5', borderRadius: 12, padding: 12,
                     fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>
-                  🗑 {t('Удалить', 'Видалити', 'Видалити')}
+                  🗑 {t('Delete', 'Видалити', 'Видалити')}
                 </button>
               </div>
 
               {confirmDel === selResume.id && (
                 <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' }}>
                   <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>
-                    {t('Удалить это резюме?', 'Просмотреть это резюме?', 'Просмотреть это резюме?')}
+                    {t('Delete this CV?', 'Видалити це CV?', 'Видалити це CV?')}
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px Solid ${C.border}`, borderRadius: 8, отступ: 10, курсор: 'pointer', FontSize: 13 }}>{t('Cancel', 'Скачать', 'Скачать')</button>
+                    <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
                     <button onClick={() => handleDeleteResume(selResume.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
                   </div>
                 </div>
@@ -1793,7 +1793,7 @@ export default function AppContent() {
           )
         })()}
 
-        {/* ══ ДОБАВИТЬ / ИЗМЕНИТЬ ФОРМУ РЕЗЮМЕ ══ */}
+        {/* ══ ADD / EDIT CV FORM ══ */}
         {tab === 'resume' && (view === 'addResume' || view === 'editResume') && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>
@@ -1837,39 +1837,39 @@ export default function AppContent() {
                       color: resumeForm.status===s.id ? '#fff' : C.textSub,
                       border: `1.5px solid ${resumeForm.status===s.id ? s.color : C.border}`,
                       borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    {язык === 'Великобритания' ? s.uk: lang === 'ru'? s.ru : s.en}
+                    {lang === 'uk' ? s.uk : lang === 'ru' ? s.ru : s.en}
                   </button>
                 ))}
               </div>
             </FField>
 
-            <FField label={t('О себе / Резюме', 'Про меня / Резюме', 'Про меня / Резюме')}>
+            <FField label={t('About me / Summary', 'Про мене / Резюме', 'Про мене / Резюме')}>
               <textarea value={resumeForm.summary} onChange={e => setResumeForm(f=>({...f,summary:e.target.value}))}
-                rows={4} Placeholder={t('Краткое профессиональное описание…', 'Короткий профессиональный опис…', 'Короткий профессиональный опис…')}
+                rows={4} placeholder={t('Brief professional summary…', 'Короткий професійний опис…', 'Короткий професійний опис…')}
                 style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
-            <FField label={t('Ключевые навыки (через запятую)', 'Ключевые навички (через кого)', 'Ключевые навички (через кого)')}>
+            <FField label={t('Key Skills (comma separated)', 'Ключові навички (через кому)', 'Ключові навички (через кому)')}>
               <textarea value={resumeForm.skills} onChange={e => setResumeForm(f=>({...f,skills:e.target.value}))}
-                rows={3} placeholder="Сертифицировано по F-газу, зеленая карта CSCS, установка систем отопления, вентиляции и кондиционирования, кондиционирование воздуха…"
+                rows={3} placeholder="F-Gas certified, CSCS Green Card, HVAC installation, Air conditioning…"
                 style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
-            <FField label={t('Опыт работы', 'Доступ к работе', 'Доступ к работе')}>
+            <FField label={t('Work Experience', 'Досвід роботи', 'Досвід роботи')}>
               <textarea value={resumeForm.experience} onChange={e => setResumeForm(f=>({...f,experience:e.target.value}))}
-                rows={6} Placeholder={t('Должность — Компания — Даты\nОсновные достижения…', 'Посада — Компанія — Дати\nОсновні досягнення…', 'Посада — Компанія — Дати\nОсновні досягнення…')}
+                rows={6} placeholder={t('Job title — Company — Dates\nKey achievements…', 'Посада — Компанія — Дати\nОсновні досягнення…', 'Посада — Компанія — Дати\nОсновні досягнення…')}
                 style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
-            <FField label={t('Образование и квалификация', 'Освещение и квалификация', 'Освещение и квалификация')}>
+            <FField label={t('Education & Qualifications', 'Освіта та кваліфікації', 'Освіта та кваліфікації')}>
               <textarea value={resumeForm.education} onChange={e => setResumeForm(f=>({...f,education:e.target.value}))}
-                rows={4} Placeholder={t('Степень / Сертификат — Вуз — Год…', 'Ступінь / Серт — Заклад — Рік…', 'Ступінь / Серт — Заклад — Рік…')}
+                rows={4} placeholder={t('Degree / Cert — Institution — Year…', 'Ступінь / Серт — Заклад — Рік…', 'Ступінь / Серт — Заклад — Рік…')}
                 style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
-            <FField label={t('Заметки (частные)', 'Ноты (частные)', 'Ноты (частные)')}>
+            <FField label={t('Notes (private)', 'Нотатки (приватні)', 'Нотатки (приватні)')}>
               <textarea value={resumeForm.notes} onChange={e => setResumeForm(f=>({...f,notes:e.target.value}))}
-                rows={2} Placeholder={t('Личные заметки об этой заявке…', 'Особые ноты о вашей заявке…', 'Особые ноты о вашей заявке…')}
+                rows={2} placeholder={t('Personal notes about this application…', 'Особисті нотатки про цю заявку…', 'Особисті нотатки про цю заявку…')}
                 style={{ ...inputStyle, resize: 'vertical' }} />
             </FField>
 
@@ -1883,7 +1883,7 @@ export default function AppContent() {
                 {resumeForm.pinned ? '✓' : ''}
               </div>
               <span style={{ fontSize: 13, color: resumeForm.pinned ? '#854d0e' : C.textSub, fontWeight: 600 }}>
-                📌 {t('Закрепить это резюме', 'Закрепить это резюме', 'Закрепить это резюме')}
+                📌 {t('Pin this CV', 'Закріпити це CV', 'Закріпити це CV')}
               </span>
             </div>
 
@@ -1891,13 +1891,13 @@ export default function AppContent() {
               <button onClick={() => view === 'addResume' ? switchTab('resume') : setView('resumeDetail')}
                 style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10,
                   padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>
-                {t('Отмена', 'Скачать', 'Скачать')}
+                {t('Cancel', 'Скасувати', 'Скасувати')}
               </button>
               <button onClick={view === 'addResume' ? handleAddResume : handleUpdateResume}
                 disabled={!resumeForm.title || saving}
                 style={{ flex: 2, background: resumeForm.title ? '#1a4480' : '#cbd5e0', border: 'none',
                   borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
-                {сохранение? '⏳': просмотр === 'addResume'? t('Сохранить резюме', 'Зберегти резюме', 'Зберегти резюме') : t('Сохранить изменения', 'Зберегти', 'Зберегти')}
+                {saving ? '⏳' : view === 'addResume' ? t('Save CV', 'Зберегти CV', 'Зберегти CV') : t('Save Changes', 'Зберегти', 'Зберегти')}
               </button>
             </div>
           </div>
@@ -1905,57 +1905,57 @@ export default function AppContent() {
 
         {tab === 'todo' && view === 'list' && (
           <>
-            {/* Индикатор выполнения */}
+            {/* Progress bar */}
             <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 14 }}>
-              <div style={{ dis play: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, цвет: C.navy }}>{t('Progress', 'Progres', 'Progres')</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{t('Progress', 'Прогрес', 'Прогрес')}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: C.blue }}>{todoDone}/{todos.length}</span>
               </div>
               <div style={{ background: C.bg, borderRadius: 99, height: 10, overflow: 'hidden' }}>
                 <div style={{ background: `linear-gradient(90deg, ${C.accent}, #22c55e)`, height: '100%', borderRadius: 99, width: `${todos.length ? (todoDone / todos.length * 100) : 0}%`, transition: 'width 0.4s ease' }} />
               </div>
-              <div style={{ fontSize: 12, color: C.muted, MarginTop: 6 }}>{todos.length - todoDone} {t('remaining', 'залишилось', 'залишилось')</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{todos.length - todoDone} {t('remaining', 'залишилось', 'залишилось')}</div>
             </div>
 
             {Array.from(new Set(todos.map(t => t.week))).sort((a, b) => a - b).map(w => {
               const wL = {
-                0: { en: '📅 Дни 1–2 · Прибытие', ru: '📅 Дни 1–2 · Прибытие' },
-                1: { en: '📅 Дни 3–5 · Критические шаги', ru: '📅 Дни 3–5 · Критически важные шаги' },
-                2: { en: '📅 Неделя 2 · Жилье и школа', ru: '📅 Неделя 2 · Жилье и школа' },
-                3: { en: '📅 Неделя 3 · Пособия и финансы', ru: '📅 Неделя 3 · Пособия и финансы' },
-                4: { en: '📅 Неделя 3–4 · Работа', ru: '📅 Неделя 3–4 · Работа' },
-                5: { en: '📅 Неделя 4–5 · Инфраструктура', ru: '📅 Неделя 4–5 · Обустройство' },
-                6: { en: '📅 Неделя 6 · Итоговый контрольный список', ru: '📅 Неделя 6 · Итоговая проверка' },
-                7: { en: '📅 Позже', ru: '📅 Позже' },
+                0: { en: '📅 Days 1–2 · Arrival', ru: '📅 Дни 1–2 · Прибытие' },
+                1: { en: '📅 Days 3–5 · Critical Steps', ru: '📅 Дни 3–5 · Критически важные шаги' },
+                2: { en: '📅 Week 2 · Housing & School', ru: '📅 Неделя 2 · Жильё и школа' },
+                3: { en: '📅 Week 3 · Benefits & Finances', ru: '📅 Неделя 3 · Пособия и финансы' },
+                4: { en: '📅 Week 3–4 · Work', ru: '📅 Неделя 3–4 · Работа' },
+                5: { en: '📅 Week 4–5 · Infrastructure', ru: '📅 Неделя 4–5 · Обустройство' },
+                6: { en: '📅 Week 6 · Final Checklist', ru: '📅 Неделя 6 · Итоговая проверка' },
+                7: { en: '📅 Later', ru: '📅 Позже' },
               }
               const items = todos.filter(t => t.week === w)
               const doneH = items.filter(t => t.done).length
-              возвращаться (
+              return (
                 <div key={w} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.blue }}>
-                      {язык !== 'эн' ? wL[w]?.ru : wL[w]?.en}
+                      {lang !== 'en' ? wL[w]?.ru : wL[w]?.en}
                     </div>
                     <span style={{ fontSize: 11, color: C.muted }}>{doneH}/{items.length}</span>
                   </div>
                   <div style={{ background: C.surface, borderRadius: 14, overflow: 'hidden' }}>
                     {items.map((item, i) => (
                       <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: i < items.length - 1 ? `1px solid ${C.border}` : 'none', background: item.done ? '#f0fdf4' : C.surface }}>
-                        {/* Флажок */}
+                        {/* Checkbox */}
                         <div onClick={() => handleToggleTodo(item)} style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: item.done ? '#22c55e' : 'transparent', border: item.done ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
                           {item.done ? '✓' : ''}
                         </div>
-                        {/* Текст */}
+                        {/* Text */}
                         <div onClick={() => handleToggleTodo(item)} style={{ flex: 1, fontSize: 13, color: item.done ? '#4ade80' : C.text, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4, cursor: 'pointer' }}>
-                          {язык !== 'эн' ? item.textRu || элемент.текст: элемент.текст}
+                          {lang !== 'en' ? item.textRu || item.text : item.text}
                         </div>
                         <span style={{ fontSize: 14 }}>{CATEGORIES.find(c => c.id === item.category)?.icon || '📁'}</span>
-                        {/* Кнопка редактирования */}
+                        {/* Edit button */}
                         <button onClick={() => { setSelTodo(item); setTodoForm({ text: item.text, textRu: item.textRu, category: item.category, week: item.week }); setView('editTodo') }}
                           style={{ background: '#eff6ff', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.blue, flexShrink: 0 }}>
                           ✏️
                         </button>
-                        {/* Кнопка удаления */}
+                        {/* Delete button */}
                         <button onClick={() => { setConfirmDel(item.id) }}
                           style={{ background: '#fee2e2', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.red, flexShrink: 0 }}>
                           🗑
@@ -1964,41 +1964,41 @@ export default function AppContent() {
                     ))}
                   </div>
 
-                  {/* Встроенное подтверждение удаления для списка дел */}
+                  {/* Inline confirm delete for todo */}
                   {items.some(i => i.id === confirmDel) && (
                     <div style={{ background: '#fee2e2', borderRadius: 10, padding: '12px 14px', marginTop: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ flex: 1, FontSize: 13, цвет: '#991b1b', FontWeight: 600 }}>{t('Удалить эту задачу?', 'Выдать это задание?', 'Выдать это задание?')</span>
+                      <span style={{ flex: 1, fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{t('Delete this task?', 'Видалити це завдання?', 'Видалити це завдання?')}</span>
                       <button onClick={() => setConfirmDel(null)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 10px', cursor: 'pointer', fontSize: 12 }}>{t('No', 'Нет')}</button>
-                      <button onClick={() => { const id = confirmDel!; handleDeleteTodo(id) }} style={{ background: C.red, border: 'none', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 700 }}>{t('Да', 'Да')}</button>
+                      <button onClick={() => { const id = confirmDel!; handleDeleteTodo(id) }} style={{ background: C.red, border: 'none', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 700 }}>{t('Yes', 'Да')}</button>
                     </div>
                   )}
                 </div>
               )
             })}
 
-            {/* Действия снизу */}
+            {/* Bottom actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
               <button onClick={handleResetTodos} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.textSub }}>
-                🔄 {t('Сбросить все', 'Скинути', 'Скинути')}
+                🔄 {t('Reset all', 'Скинути', 'Скинути')}
               </button>
               <button onClick={() => { setTodoForm({ text: '', textRu: '', category: 'other', week: 1 }); setView('addTodo') }} style={{ flex: 2, background: C.blue, border: 'none', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
-                + {t('Добавить пользовательскую задачу', 'Добавить задание', 'Добавить задание')}
+                + {t('Add custom task', 'Додати завдання', 'Додати завдання')}
               </button>
             </div>
           </>
         )}
 
-        {/* ══ ДОБАВИТЬ TODO ══ */}
+        {/* ══ ADD TODO ══ */}
         {tab === 'todo' && view === 'addTodo' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>➕ {t('Новая задача', 'Нове завдання')</div>
-            <FField label={t('Task (EN)', 'Задача (EN)')}><input value={todoForm.text} onChange={e => setTodoForm(f => ({ ...f, text: e.target.value }))} placeholder="eg Book GP appointment" style={inputStyle} /></FField>
-            <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} Placeholder="напр. Записаться к врачу" style={inputStyle} /></FField>
-            <FField label={t('Неделя', 'Тиждень', 'Тиждень')}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>➕ {t('New Task', 'Нове завдання', 'Нове завдання')}</div>
+            <FField label={t('Task (EN)', 'Задача (EN)')}><input value={todoForm.text} onChange={e => setTodoForm(f => ({ ...f, text: e.target.value }))} placeholder="e.g. Book GP appointment" style={inputStyle} /></FField>
+            <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} placeholder="напр. Записаться к врачу" style={inputStyle} /></FField>
+            <FField label={t('Week', 'Тиждень', 'Тиждень')}>
               <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
-                <option value={0}>{t('Дни прибытия 1-2', 'Дни 1-2 Прибытия')</option>
-                <option value={1}>{t('Дни 3–5 критических шагов', 'Дни 3–5 критически важных')</option>
-                <option value={2}>{t('Неделя 2 Жилищная школа', 'Неделя 2 Жилье и школа')</option>
+                <option value={0}>{t('Days 1-2 Arrival', 'Дни 1-2 Прибытие')}</option>
+                <option value={1}>{t('Days 3-5 Critical Steps', 'Дни 3-5 Критически важные')}</option>
+                <option value={2}>{t('Week 2 Housing School', 'Неделя 2 Жильё и школа')}</option>
                 <option value={3}>{t('Week 3 Benefits', 'Неделя 3 Пособия и финансы')}</option>
                 <option value={4}>{t('Week 3-4 Work', 'Неделя 3-4 Работа')}</option>
                 <option value={5}>{t('Week 4-5 Infrastructure', 'Неделя 4-5 Обустройство')}</option>
@@ -2090,9 +2090,9 @@ export default function AppContent() {
               ))
             )}
 
-            {/* Добавить контактную форму */}
+            {/* Add contact form */}
             <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
-              <div style={{ FontSize: 13, FontWeight: 700, Color: D.navy, MarginBottom: 12 }}>+ {t('Добавить контакт', 'Добавить контакт', 'Добавить контакт')</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>+ {t('Add Contact', 'Додати контакт', 'Додати контакт')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 <div><input value={contactForm.name} onChange={e=>setContactForm(f=>({...f,name:e.target.value}))} placeholder={t('Name','Імʼя','Імʼя')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
                 <div><input value={contactForm.relation} onChange={e=>setContactForm(f=>({...f,relation:e.target.value}))} placeholder={t('Relation','Хто це','Хто це')} style={{...inputStyle, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} /></div>
@@ -2100,15 +2100,15 @@ export default function AppContent() {
               <input value={contactForm.phone} onChange={e=>setContactForm(f=>({...f,phone:e.target.value}))} placeholder="+44 7700 900000" type="tel" style={{...inputStyle, marginBottom: 10, fontFamily: 'monospace', fontSize: 16, background: D.bg, color: D.text, border: `1.5px solid ${D.border}`}} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, cursor: 'pointer' }} onClick={() => setContactForm(f=>({...f,is_primary:!f.is_primary}))}>
                 <div style={{ width: 20, height: 20, borderRadius: 5, background: contactForm.is_primary ? '#c62828' : 'transparent', border: `2px solid ${D.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>{contactForm.is_primary ? '✓' : ''}</div>
-                <span style={{ fontSize: 13, color: D.textSub }}>⭐ {t('Основной/Чрезвычайный','Головний/Екстрений','Головний/Екстрений')</span>
+                <span style={{ fontSize: 13, color: D.textSub }}>⭐ {t('Primary / Emergency','Головний / Екстрений','Головний / Екстрений')}</span>
               </div>
               <button onClick={handleAddContact} disabled={!contactForm.name||!contactForm.phone||saving} style={{ width: '100%', background: contactForm.name&&contactForm.phone ? '#c62828' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
-                {сохранение? '⏳' : `+ ${t('Сохранить контакт','Зберегти контакт','Зберегти контакт')}`}
+                {saving ? '⏳' : `+ ${t('Save Contact','Зберегти контакт','Зберегти контакт')}`}
               </button>
             </div>
 
-            {/* Медицинские записи */}
-            <SLabel>🏥 {t('Медицинские записи', 'Медицинские записи', 'Медицинские записи')</SLabel>
+            {/* Medical records */}
+            <SLabel>🏥 {t('Health Records', 'Медичні записи', 'Медичні записи')}</SLabel>
 
             {medical.map(m => (
               <div key={m.id} style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 12, marginBottom: 8, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '4px solid #0369a1' }}>
@@ -2117,7 +2117,7 @@ export default function AppContent() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: D.navy }}>{m.title}</div>
                     {m.value && <div style={{ fontSize: 13, color: D.blue, fontWeight: 600, marginTop: 4 }}>{m.value}</div>}
                     {m.notes && <div style={{ fontSize: 12, color: D.muted, marginTop: 2 }}>{m.notes}</div>}
-                    {m.valid_until && <div style={{ fontSize: 11, color: D.muted, MarginTop: 4 }}>{t('Действителен до','Дійсний до','Дійсний до')} {formatDate(m.valid_until)}<ExpiryBadge d={m.valid_until} /></div>}
+                    {m.valid_until && <div style={{ fontSize: 11, color: D.muted, marginTop: 4 }}>{t('Valid until','Дійсний до','Дійсний до')} {formatDate(m.valid_until)}<ExpiryBadge d={m.valid_until} /></div>}
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <CopyBtn value={m.value || m.title} lang={lang} />
@@ -2127,9 +2127,9 @@ export default function AppContent() {
               </div>
             ))}
 
-            {/* Добавить форму медицинской карты */}
+            {/* Add medical record form */}
             <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
-              <div style={{ FontSize: 13, FontWeight: 700, Color: D.navy, MarginBottom: 12 }}>+ {t('Добавить медицинскую запись','Додати медицинских записей','Додати медицинских записей')</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>+ {t('Add Health Record','Додати медичний запис','Додати медичний запис')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                 {[
                   {id:'gp', en:'GP Doctor', uk:'Лікар GP'},
@@ -2161,49 +2161,49 @@ export default function AppContent() {
               <div style={{ fontSize: 22, fontWeight: 700 }}>{profile?.name || user?.email?.split('@')[0]}</div>
               {profile?.name_ru && <div style={{ fontSize: 14, opacity: 0.6, marginTop: 2 }}>{profile.name_ru}</div>}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 14 }}>
-                {profile?.dob && <div style={{ textAlign: 'center' }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('DOB', 'Дата народження', 'Дата народження')</div><div style={{ FontWeight: 600, FontSize: 14 }}>{formatDate(profile.dob)</div></div>}
-                {profile?.nationality && <div style={{ textAlign: 'center' }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('Nationality', 'Громадянство', 'Громадянство')</div><div style={{ FontWeight: 600, FontSize: 14 }}>{profile.nationality</div></div>}
+                {profile?.dob && <div style={{ textAlign: 'center' }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('DOB', 'Дата народження', 'Дата народження')}</div><div style={{ fontWeight: 600, fontSize: 14 }}>{formatDate(profile.dob)}</div></div>}
+                {profile?.nationality && <div style={{ textAlign: 'center' }}><div style={{ fontSize: 11, opacity: 0.5 }}>{t('Nationality', 'Громадянство', 'Громадянство')}</div><div style={{ fontWeight: 600, fontSize: 14 }}>{profile.nationality}</div></div>}
               </div>
               <div style={{ marginTop: 12, fontSize: 12, opacity: 0.4 }}>{user?.email}</div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <button onClick={() => { setProfForm(profile || {}); setView('editProfile') }} style={{ background: dark ? '#1e293b' : C.surface, граница: `1.5px Solid ${D.border}`, borderRadius: 12, отступы: 14, FontSize: 14, FontWeight: 600, курсор: 'pointer', цвет: D.navy }}>✏️ {t('Редактировать профиль', 'Изменить', 'Редактировать')</button>
+              <button onClick={() => { setProfForm(profile || {}); setView('editProfile') }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: D.navy }}>✏️ {t('Edit Profile', 'Редагувати', 'Редагувати')}</button>
               <button onClick={signOut} style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.red }}>🚪 {t('Sign Out', 'Вийти', 'Вийти')}</button>
             </div>
 
-            {/* Строка настроек */}
+            {/* Settings row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
               <button onClick={toggleTheme} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>{dark ? '☀️' : '🌙'}</span>
-                <span>{темно? t('Светлый','Светла','Светла') : t('Темный','Темна','Темна')</span>
+                <span>{dark ? t('Light','Світла','Світла') : t('Dark','Темна','Темна')}</span>
               </button>
               <button onClick={() => {
-                const pin = Prompt(t('Установить 4-значный PIN-код (для удаления оставьте пустым):','Ввести 4-значный PIN-код (порожньо — видалити):','Ввести 4-значный PIN-код (порожно — посмотреть):'))
+                const pin = prompt(t('Set 4-digit PIN (leave empty to remove):','Введіть 4-значний PIN (порожньо — видалити):','Введіть 4-значний PIN (порожньо — видалити):'))
                 if (pin === null) return
-                если (pin === '') {removePin(); alert(t('ПИН-код удален','ПИН-код виделено','ПИН-код видалено')) }
-                иначе, если (pin.length === 4 && /^\d{4}$/.test(pin)) { setPin(pin); alert(t('ПИН-код установлен!','ПИН-код установлен!','ПИН-код установлен!')) }
-                else alert(t('PIN должен состоять из 4 цифр', 'PIN может состоять из 4 цифр', 'PIN может состоять из 4 цифр'))
+                if (pin === '') { removePin(); alert(t('PIN removed','PIN видалено','PIN видалено')) }
+                else if (pin.length === 4 && /^\d{4}$/.test(pin)) { setPin(pin); alert(t('PIN set!','PIN встановлено!','PIN встановлено!')) }
+                else alert(t('PIN must be 4 digits','PIN має бути 4 цифри','PIN має бути 4 цифри'))
               }} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>🔐</span>
-                <span>ПИН-код</span>
+                <span>PIN</span>
               </button>
               <button onClick={() => switchTab('medical')} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 22 }}>🏥</span>
-                <span>{t('Health','Здоровья','Здоровья')</span>
+                <span>{t('Health','Здоровʼя','Здоровʼя')}</span>
               </button>
             </div>
             <button onClick={() => setView('export')} style={{ width: '100%', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#166534', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              📤 {t('Экспортировать мои данные', 'Экспортировать данные', 'Экспортировать данные')}
+              📤 {t('Export my data', 'Експортувати дані', 'Експортувати дані')}
             </button>
 
             <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px' }}>
-              <div style={{ FontSize: 13, FontWeight: 700, Color: C.navy, MarginBottom: 12 }}>🔒 {t('Конфиденциальность и безопасность', 'Конфиденційність', 'Конфіденційність')</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>🔒 {t('Privacy & Security', 'Конфіденційність', 'Конфіденційність')}</div>
               {[
-                { icon: '🔐', en: 'Сквозное зашифрование данных', ru: 'Данные защищены шифрованием' },
-                { icon: '👁', en: 'Только вы можете видеть ваши документы', ru: 'Только ты видишь свои документы' },
-                { icon: '☁️', en: 'Надежно хранится в облаке Supabase', ru: 'Хранится в защищённом облаке Supabase' },
-                { icon: '🗑', en: 'При удалении учетной записи удаляются все данные', ru: 'Удаление аккаунта = удаление всех данных' },
+                { icon: '🔐', en: 'End-to-end encrypted data', ru: 'Данные защищены шифрованием' },
+                { icon: '👁', en: 'Only you can see your documents', ru: 'Только ты видишь свои документы' },
+                { icon: '☁️', en: 'Securely stored in Supabase cloud', ru: 'Хранится в защищённом облаке Supabase' },
+                { icon: '🗑', en: 'Delete account removes all data', ru: 'Удаление аккаунта = удаление всех данных' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
                   <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
@@ -2215,25 +2215,25 @@ export default function AppContent() {
         )}
 
 
-        {/* ══ ЭКСПОРТ ВИД ══ */}
+        {/* ══ EXPORT VIEW ══ */}
         {tab === 'profile' && view === 'export' && (
           <>
-            <button onClick={() => setView('list')} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Назад', 'Назад', 'Назад')}</button>
+            <button onClick={() => setView('list')} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
 
             <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
               <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 6 }}>
-                📤 {t('Экспорт данных', 'Экспорт даних', 'Экспорт даних')}
+                📤 {t('Export Data', 'Експорт даних', 'Експорт даних')}
               </div>
               <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>
-                {t('Загрузите данные в виде файла', 'Загрузите данные в просмотренный файл', 'Загрузите данные в просмотренный файл')}
+                {t('Download your data as a file', 'Завантажте дані у вигляді файлу', 'Завантажте дані у вигляді файлу')}
               </div>
 
-              {/* Статистика */}
+              {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 }}>
                 {[
-                  { icon: '📄', count: docs.length, label: t('Documents','Documenti','Documenti') },
-                  { icon: '📍', count: addresses.length, label: t('Addresses','Адреси','Адреси') },
-                  { icon: ' ✅', count: todos.filter(t=>t.done).length + '/' + todos.length, label: t('Tasks','Завдання','Завдання') },
+                  { icon: '📄', count: docs.length,      label: t('Documents','Документи','Документи') },
+                  { icon: '📍', count: addresses.length,  label: t('Addresses','Адреси','Адреси') },
+                  { icon: '✅', count: todos.filter(t=>t.done).length + '/' + todos.length, label: t('Tasks','Завдання','Завдання') },
                 ].map((s,i) => (
                   <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
                     <div style={{ fontSize: 20 }}>{s.icon}</div>
@@ -2243,32 +2243,32 @@ export default function AppContent() {
                 ))}
               </div>
 
-              {/* Кнопки экспорта */}
+              {/* Export buttons */}
               {[
                 {
-                  значок: '📊',
-                  title: t('Документы — CSV», «Документы — CSV», «Документы — CSV»),
-                  desc: t('Открыть в Excel/Google Sheets', 'Открыть в Excel/Google Sheets', 'Открыть в Excel/Google Sheets'),
-                  цвет: '#166534', фон: '#f0fdf4', граница: '#86efac',
-                  действие: () => exportCSV(),
+                  icon: '📊',
+                  title: t('Documents — CSV', 'Документи — CSV', 'Документи — CSV'),
+                  desc: t('Open in Excel / Google Sheets', 'Відкрити в Excel / Google Sheets', 'Відкрити в Excel / Google Sheets'),
+                  color: '#166534', bg: '#f0fdf4', border: '#86efac',
+                  action: () => exportCSV(),
                 },
                 {
                   icon: '🖨️',
-                  title: t('Распечатать / Сохранить как PDF', 'Друк / Зберегти в PDF', 'Друк / Зберегти в PDF'),
-                  desc: t('Полное изложение — распечатайте или сохраните PDF', 'Полное изложение — распечатать или сохранить PDF'), 'Полное издание — разобрать или сохранить PDF'),
+                  title: t('Print / Save as PDF', 'Друк / Зберегти як PDF', 'Друк / Зберегти як PDF'),
+                  desc: t('Full summary — print or save PDF', 'Повне зведення — роздрукувати або зберегти PDF', 'Повне зведення — роздрукувати або зберегти PDF'),
                   color: '#1d4ed8', bg: '#eff6ff', border: '#93c5fd',
-                  действие: () => exportPrint(),
+                  action: () => exportPrint(),
                 },
                 {
                   icon: copyDone ? '✅' : '📋',
-                  заголовок: copyDone ? t('Скопировано!', 'Скопировано!', 'Скопировано!') : t('Скопировать все в буфер обмена', 'Скопировать все в буфер', 'Скопировать все в буфер'),
-                  desc: t('Вставить в любое приложение', 'Вставить в будь-який додаток', 'Вставить в будь-який додаток'),
+                  title: copyDone ? t('Copied!', 'Скопійовано!', 'Скопійовано!') : t('Copy all to clipboard', 'Скопіювати все в буфер', 'Скопіювати все в буфер'),
+                  desc: t('Paste into any app', 'Вставити в будь-який додаток', 'Вставити в будь-який додаток'),
                   color: copyDone ? '#166534' : '#7c3aed', bg: copyDone ? '#f0fdf4' : '#f5f3ff', border: copyDone ? '#86efac' : '#c4b5fd',
-                  действие: () => exportClipboard(),
+                  action: () => exportClipboard(),
                 },
               ].map((btn, i) => (
                 <button key={i} onClick={btn.action} style={{
-                  ширина: '100%', фон: btn.bg, граница: `1.5px solid ${btn.border}`,
+                  width: '100%', background: btn.bg, border: `1.5px solid ${btn.border}`,
                   borderRadius: 14, padding: '16px 18px', cursor: 'pointer', marginBottom: 10,
                   display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
                 }}>
@@ -2283,9 +2283,9 @@ export default function AppContent() {
               <div style={{ background: C.bg, borderRadius: 10, padding: '12px 14px', marginTop: 6 }}>
                 <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
                   🔒 {t(
-                    «Экспорт содержит только ваши персональные данные. Никогда не публикуйте файлы, содержащие конфиденциальные документы».
-                    «Экспорт может быть лучше ваших личностей. Не делите файлы с конфиденциальными документами публично.',
-                    «Экспорт может быть лучше ваших личностей. Не делите файлы с конфиденциальными документами публично.
+                    'Export contains only your personal data. Never share files with sensitive documents publicly.',
+                    'Експорт містить лише ваші особисті дані. Не діліться файлами з конфіденційними документами публічно.',
+                    'Експорт містить лише ваші особисті дані. Не діліться файлами з конфіденційними документами публічно.'
                   )}
                 </div>
               </div>
@@ -2293,38 +2293,38 @@ export default function AppContent() {
           </>
         )}
 
-        {/* ══ РЕДАКТИРОВАТЬ ПРОФИЛЬ ══ */}
-        {tab === 'профиль' && view === 'editProfile' && (
+        {/* ══ EDIT PROFILE ══ */}
+        {tab === 'profile' && view === 'editProfile' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ FontSize: 17, FontWeight: 700, Color: C.navy, MarginBottom: 20 }}>✏️ {t('Редактировать профиль', 'Редактировать профиль', 'Редактировать профиль')</div>
-            <FField label={t('Аватар', 'Аватар', 'Аватар')}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Profile', 'Редагувати профіль', 'Редагувати профіль')}</div>
+            <FField label={t('Avatar', 'Аватар', 'Аватар')}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {AVATARS.map(a => <button key={a} onClick={() => setProfForm(f => ({ ...f, avatar: a }))} style={{ width: 44, height: 44, borderRadius: 10, fontSize: 24, border: `2px solid ${profForm.avatar === a ? C.navy : C.border}`, background: profForm.avatar === a ? C.bg : 'transparent', cursor: 'pointer' }}>{a}</button>)}
               </div>
             </FField>
-            <FField label={t('Полное имя (EN)', 'Имя (EN)')}><input value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Сергий Палесика" style={inputStyle} /></FField>
-            <FField label={t('Полное имя (RU)', 'Имя (RU)')}><input value={profForm.name_ru || ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} Placeholder="Сергей Палесика" style={inputStyle} /></FField>
-            <FField label={t('Дата рождения', 'Дата народження', 'Дата народження')}><input type="date" value={profForm.dob || ''} onChange={e => setProfForm(f => ({ ...f, dob: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Национальность', 'Громадянство', 'Громадянство')}>
-              <select value={profForm.nationality || 'Украинец'} onChange={e => setProfForm(f => ({ ...f, nationality: e.target.value }))} style={inputStyle}>
+            <FField label={t('Full name (EN)', 'Имя (EN)')}><input value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Sergii Palesika" style={inputStyle} /></FField>
+            <FField label={t('Full name (RU)', 'Имя (RU)')}><input value={profForm.name_ru || ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} placeholder="Сергей Палесика" style={inputStyle} /></FField>
+            <FField label={t('Date of Birth', 'Дата народження', 'Дата народження')}><input type="date" value={profForm.dob || ''} onChange={e => setProfForm(f => ({ ...f, dob: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Nationality', 'Громадянство', 'Громадянство')}>
+              <select value={profForm.nationality || 'Ukrainian'} onChange={e => setProfForm(f => ({ ...f, nationality: e.target.value }))} style={inputStyle}>
                 {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </FField>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setView('list')} style={{ flex: 1, background: C.bg, border: `1.5px Solid ${C.border}`, borderRadius: 10, отступ: 14, FontSize: 14, курсор: 'pointer', цвет: C.textSub, FontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')</button>
+              <button onClick={() => setView('list')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleSaveProfile} disabled={saving} style={{ flex: 2, background: saving ? '#94a3b8' : C.navy, border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: '#fff', fontWeight: 700 }}>{saving ? '⏳' : t('Save', 'Зберегти', 'Зберегти')}</button>
             </div>
           </div>
         )}
 
       </div>
-      {/* ══ НИЖНЯЯ ПАНЕЛЬ ВКЛАДОК ══ */}
+      {/* ══ BOTTOM TAB BAR ══ */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: dark ? '#1e293b' : '#fff', borderTop: `1px solid ${D.border}`, boxShadow: '0 -4px 20px rgba(0,0,0,0.15)', zIndex: 90, display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <NavBtn id="home" icon="🏠" en="Home" ru="Головна" uk="Головна" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
-          <NavBtn id="docs" icon="📂" en="Docs" ru="Доки" uk="Доки" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
-          <NavBtn id="resume" icon="📝" en="CV" ru="CV" uk="CV" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
-          <NavBtn id="medical" icon="🏥" en="Health" ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
-          <NavBtn id="profile" icon="👤" en="Profile" ru="Профіль" uk="Профіль" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+        <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="docs"    icon="📂" en="Docs"    ru="Доки"    uk="Доки"      tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="resume"  icon="📝" en="CV"      ru="CV"      uk="CV"        tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="medical" icon="🏥" en="Health"  ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="profile" icon="👤" en="Profile" ru="Профіль" uk="Профіль"  tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
       </div>
       </>
     )}
@@ -2335,9 +2335,9 @@ export default function AppContent() {
 
 function NavBtn({ id, icon, en, ru, uk, tab, dark, lang, switchTab }) {
   const active = tab === id
-  const label = lang === 'uk' ? Великобритания: lang === 'ru'? ру: эн
+  const label = lang === 'uk' ? uk : lang === 'ru' ? ru : en
   const color = active ? (dark ? '#60a5fa' : '#0f1f3d') : (dark ? '#475569' : '#a0aec0')
-  возвращаться (
+  return (
     <button onClick={function(){ switchTab(id) }} style={{ flex: 1, background: 'transparent', border: 'none', padding: '10px 4px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: color }}>
       <div style={{ fontSize: 22, lineHeight: 1 }}>{icon}</div>
       <div style={{ fontSize: 10, fontWeight: active ? 700 : 500 }}>{label}</div>
