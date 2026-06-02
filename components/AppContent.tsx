@@ -5,7 +5,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
-import type { Address, DocPhoto, Resume, ResumeFile } from '@/lib/db'
+import type { Address, DocPhoto, Resume, ResumeFile, JobApplication, JobApplicationFile } from '@/lib/db'
+import JobApplicationsTab from '@/components/JobApplicationsTab'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -19,7 +20,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru' | 'uk'
 type Theme   = 'light' | 'dark'
-type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'medical' | 'profile'
+type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'jobs' | 'medical' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
@@ -1902,6 +1903,14 @@ export default function AppContent() {
           </div>
         )}
 
+        {tab === 'jobs' && user && (
+          <JobApplicationsTab
+            userId={user.id}
+            dark={dark}
+            lang={lang}
+          />
+        )}
+
         {tab === 'todo' && view === 'list' && (
           <>
             {/* Progress bar */}
@@ -2322,6 +2331,7 @@ export default function AppContent() {
         <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="docs"    icon="📂" en="Docs"    ru="Доки"    uk="Доки"      tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="resume"  icon="📝" en="CV"      ru="CV"      uk="CV"        tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="jobs"    icon="💼" en="Jobs"    ru="Работа"    uk="Робота"    tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="medical" icon="🏥" en="Health"  ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="profile" icon="👤" en="Profile" ru="Профіль" uk="Профіль"  tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
       </div>
