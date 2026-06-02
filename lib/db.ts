@@ -367,3 +367,70 @@ export async function updateContact(id: string, fields: Partial<Contact>) {
 export async function deleteContact(id: string) {
   return sb().from('emergency_contacts').delete().eq('id', id)
 }
+// ── JOB APPLICATIONS ─────────────────────────────────
+// Добавить в конец файла lib/db.ts
+
+export interface JobApplication {
+  id: string
+  user_id: string
+  company: string
+  position: string
+  cv_name: string
+  applied_date: string
+  status: 'applied' | 'interview' | 'offer' | 'rejected' | 'no_response'
+  notes: string
+  color: string
+  pinned: boolean
+  created_at: string
+  updated_at: string
+  job_application_files?: JobApplicationFile[]
+}
+
+export interface JobApplicationFile {
+  id: string
+  application_id: string
+  user_id: string
+  name: string
+  mime_type: string
+  size_bytes: number
+  data_base64: string
+  added_at: string
+}
+
+export async function getJobApplications(userId: string) {
+  const { data } = await sb()
+    .from('job_applications')
+    .select('*, job_application_files(*)')
+    .eq('user_id', userId)
+    .order('pinned', { ascending: false })
+    .order('applied_date', { ascending: false })
+  return (data ?? []) as (JobApplication & { job_application_files: JobApplicationFile[] })[]
+}
+
+export async function addJobApplication(userId: string, app: Omit<JobApplication, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'job_application_files'>) {
+  const { data } = await sb()
+    .from('job_applications')
+    .insert({ user_id: userId, ...app, updated_at: new Date().toISOString() })
+    .select().single()
+  return data as JobApplication | null
+}
+
+export async function updateJobApplication(id: string, fields: Partial<Omit<JobApplication, 'id' | 'user_id' | 'job_application_files'>>) {
+  return sb().from('job_applications').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
+}
+
+export async function deleteJobApplication(id: string) {
+  return sb().from('job_applications').delete().eq('id', id)
+}
+
+export async function addJobApplicationFile(applicationId: string, userId: string, name: string, mimeType: string, sizeBytes: number, dataBase64: string) {
+  const { data } = await sb()
+    .from('job_application_files')
+    .insert({ application_id: applicationId, user_id: userId, name, mime_type: mimeType, size_bytes: sizeBytes, data_base64: dataBase64 })
+    .select().single()
+  return data as JobApplicationFile | null
+}
+
+export async function deleteJobApplicationFile(id: string) {
+  return sb().from('job_application_files').delete().eq('id', id)
+}
