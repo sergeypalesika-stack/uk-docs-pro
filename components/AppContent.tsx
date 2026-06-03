@@ -5,8 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
-import type { Address, DocPhoto, Resume, ResumeFile, JobApplication, JobApplicationFile } from '@/lib/db'
-import JobApplicationsTab from '@/components/JobApplicationsTab'
+import type { Address, DocPhoto, Resume, ResumeFile } from '@/lib/db'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -20,7 +19,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru' | 'uk'
 type Theme   = 'light' | 'dark'
-type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'jobs' | 'medical' | 'profile'
+type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'medical' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
@@ -71,6 +70,8 @@ export default function AppContent() {
   const [resumeForm, setResumeForm] = useState(EMPTY_RESUME)
   const [cvCopied, setCvCopied] = useState(false)
   const [qrDoc, setQrDoc] = useState(null)
+  const [showGuide, setShowGuide] = useState(false)
+  const [guideSection, setGuideSection] = useState('checklist')
   const [theme, setTheme] = useState('light')
   const [pinLocked, setPinLocked] = useState(false)
   const [pinInput, setPinInput] = useState('')
@@ -796,6 +797,87 @@ export default function AppContent() {
         </div>
       )}
 
+
+      {/* UK Guide Modal */}
+      {showGuide && (
+        <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 998, display: 'flex', flexDirection: 'column' }}>
+
+          {/* Guide Header */}
+          <div style={{ background: '#1e293b', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #334155' }}>
+            <button onClick={() => setShowGuide(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 22, cursor: 'pointer', padding: 0 }}>←</button>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>📖 UK Relocation Guide</div>
+            <div style={{ marginLeft: 'auto', fontSize: 11, color: '#475569' }}>Buckinghamshire Council</div>
+          </div>
+
+          {/* Section tabs (horizontal scroll) */}
+          <div style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto', background: '#1e293b', borderBottom: '1px solid #334155' }}>
+            {UK_GUIDE.map(function(s) { return (
+              <button key={s.id} onClick={() => setGuideSection(s.id)} style={{ flexShrink: 0, background: guideSection === s.id ? '#3b82f6' : '#0f172a', color: guideSection === s.id ? '#fff' : '#94a3b8', border: guideSection === s.id ? 'none' : '1px solid #334155', borderRadius: 20, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span>{s.icon}</span>
+                <span>{s.title}</span>
+                {s.priority === 'high' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />}
+              </button>
+            )})}
+          </div>
+
+          {/* Section content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+            {UK_GUIDE.filter(function(s){ return s.id === guideSection }).map(function(current) { return (
+              <div key={current.id}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                  <span style={{ fontSize: 26 }}>{current.icon}</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>{current.title}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 99, background: current.priority === 'high' ? '#7f1d1d' : current.priority === 'medium' ? '#78350f' : '#1e293b', color: current.priority === 'high' ? '#fca5a5' : current.priority === 'medium' ? '#fcd34d' : '#94a3b8', fontWeight: 600 }}>
+                    {current.priority === 'high' ? '🔴 Важно' : current.priority === 'medium' ? '🟡 Нужно' : 'Инфо'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {current.isChecklist
+                    ? current.items.map(function(item, idx) { return (
+                        <div key={idx} onClick={() => { var k = current.id+'_'+idx; setGuideSection(function(prev){ return prev }); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#1e293b', borderRadius: 10, border: '1px solid #334155', cursor: 'default' }}>
+                          <span style={{ fontSize: 22 }}>{item.urgency.split(' ')[0]}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, color: '#e2e8f0' }}>{item.text}</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{item.urgency.split(' ').slice(1).join(' ')}</div>
+                          </div>
+                        </div>
+                      )})
+                    : current.items.map(function(item, idx) { return (
+                        <div key={idx} style={{ padding: '11px 14px', background: item.critical ? '#1c1917' : '#1e293b', borderRadius: 10, borderLeft: item.critical ? '3px solid #f59e0b' : '3px solid #3b82f6' }}>
+                          {item.isLinks
+                            ? (
+                              <div>
+                                <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 8 }}>🔗 Полезные ссылки:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                  {item.links.map(function(link) { return (
+                                    <a key={link.label} href={link.url} target="_blank" rel="noreferrer" style={{ padding: '5px 12px', background: '#1e40af', borderRadius: 6, color: '#93c5fd', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
+                                      {link.label} ↗
+                                    </a>
+                                  )})}
+                                </div>
+                              </div>
+                            )
+                            : (
+                              <div style={{ fontSize: 13, lineHeight: 1.6, color: item.critical ? '#fcd34d' : '#cbd5e1' }}>
+                                {item.critical && <span style={{ marginRight: 6 }}>⚠️</span>}
+                                {item.text}
+                              </div>
+                            )
+                          }
+                        </div>
+                      )})}
+                </div>
+              </div>
+            )})}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '8px 16px', background: '#1e293b', borderTop: '1px solid #334155', fontSize: 10, color: '#475569', textAlign: 'center' }}>
+            Источник: Buckinghamshire Council · обновлено сент. 2024
+          </div>
+        </div>
+      )}
+
       {/* Photo viewer */}
       {photoView && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPhotoView(null)}>
@@ -989,6 +1071,16 @@ export default function AppContent() {
                 ))}
               </div>
             )}
+
+            {/* UK Guide button */}
+            <button onClick={() => { setShowGuide(true); setGuideSection('checklist') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+              <span style={{ fontSize: 32 }}>📖</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>UK Relocation Guide</div>
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>eVisa · Банк · Работа · NHS · Жильё · Права</div>
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: 20, opacity: 0.6 }}>›</span>
+            </button>
 
             {/* QR Share Code */}
             {(() => {
@@ -1903,14 +1995,6 @@ export default function AppContent() {
           </div>
         )}
 
-        {tab === 'jobs' && user && (
-          <JobApplicationsTab
-            userId={user.id}
-            dark={dark}
-            lang={lang}
-          />
-        )}
-
         {tab === 'todo' && view === 'list' && (
           <>
             {/* Progress bar */}
@@ -2331,7 +2415,6 @@ export default function AppContent() {
         <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="docs"    icon="📂" en="Docs"    ru="Доки"    uk="Доки"      tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="resume"  icon="📝" en="CV"      ru="CV"      uk="CV"        tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
-          <NavBtn id="jobs"    icon="💼" en="Jobs"    ru="Работа"    uk="Робота"    tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="medical" icon="🏥" en="Health"  ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="profile" icon="👤" en="Profile" ru="Профіль" uk="Профіль"  tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
       </div>
@@ -2341,6 +2424,82 @@ export default function AppContent() {
   )
 }
 
+
+// ── UK GUIDE DATA ─────────────────────────────────
+const UK_GUIDE = [
+  { id:'evisa',      icon:'🪪', title:'eVisa и статус',          priority:'high',
+    items:[
+      { text:'С марта 2025 BRP-карты НЕ принимаются — нужна eVisa', critical:true },
+      { text:'eVisa заменяет все физические документы (BRP, штампы, стикеры)' },
+      { text:'При устройстве на работу — подтверждать right-to-work через eVisa' },
+      { text:'Помощь: ukimmigration-support-webchat.homeoffice.gov.uk' },
+    ]},
+  { id:'bank',       icon:'🏦', title:'Банковский счёт',          priority:'high',
+    items:[
+      { text:'Открытие бесплатно' },
+      { text:'Нужны: фото-ID (водит. права) + подтверждение адреса (письмо Home Office)' },
+      { text:'Если отказали — credit union (небольшая комиссия)' },
+      { text:'Без счёта нельзя получать зарплату и пособия', critical:true },
+    ]},
+  { id:'work',       icon:'💼', title:'Работа',                   priority:'high',
+    items:[
+      { text:'CV + cover letter + application form при подаче на вакансию' },
+      { text:'Украинские квалификации → британский эквивалент: Buckinghamshire Council' },
+      { text:'Право на работу подтверждается через eVisa' },
+      { text:'Indeed, Reed, Totaljobs, CV Library, Guardian Jobs', isLinks:true, links:[
+        {label:'Indeed', url:'https://uk.indeed.com/'},
+        {label:'Reed', url:'https://www.reed.co.uk/'},
+        {label:'Totaljobs', url:'https://www.totaljobs.com/'},
+        {label:'CV Library', url:'https://www.cv-library.co.uk/'},
+      ]},
+    ]},
+  { id:'benefits',   icon:'💷', title:'Пособия (Benefits)',        priority:'medium',
+    items:[
+      { text:'Universal Credit — основное пособие' },
+      { text:'Подача: gov.uk/universal-credit/how-to-claim' },
+      { text:'Нет денег в ожидании — запросить advance payment' },
+      { text:'При трудоустройстве выплаты пересчитываются автоматически' },
+    ]},
+  { id:'health',     icon:'🏥', title:'Медицина (NHS)',            priority:'high',
+    items:[
+      { text:'Зарегистрироваться у GP как можно скорее', critical:true },
+      { text:'Найти GP: nhs.uk/service-search/find-a-gp' },
+      { text:'Экстренно: 999 (угроза жизни), 111 (нужна помощь сейчас)' },
+      { text:'Психологическая помощь: Samaritans — 116 123 (24/7)' },
+    ]},
+  { id:'housing',    icon:'🏠', title:'Жильё',                    priority:'high',
+    items:[
+      { text:'Рынок аренды конкурентный — реагировать быстро', critical:true },
+      { text:'Local Housing Allowance (LHA) — помощь с арендой у частного лендлорда' },
+      { text:'Social Housing — дешевле, но длинные очереди' },
+      { text:'Мебель бесплатно: Freecycle, Facebook Marketplace' },
+    ]},
+  { id:'driving',    icon:'🚗', title:'Водительские права',        priority:'high',
+    items:[
+      { text:'Украинские права действительны до 3 лет (36 мес) после прибытия' },
+      { text:'Права до 28.12.2021 → обмен без экзамена через DVLA', critical:true },
+      { text:'Права после 28.12.2021 → нужен британский экзамен' },
+      { text:'Обмен: gov.uk/exchange-foreign-driving-licence' },
+    ]},
+  { id:'moving',     icon:'📦', title:'При переезде — уведомить',  priority:'medium',
+    items:[
+      { text:'HMRC: gov.uk/tell-hmrc-change-address' },
+      { text:'DVLA: gov.uk/tell-dvla-changed-address' },
+      { text:'Council Tax — уведомить совет сразу, иначе задолженность задним числом', critical:true },
+      { text:'Банк, GP, школы детей, страховые, коммунальные службы' },
+    ]},
+  { id:'checklist',  icon:'✅', title:'Чеклист первых шагов',      priority:'high', isChecklist:true,
+    items:[
+      { text:'Проверить/оформить eVisa',                      urgency:'🔴 Немедленно' },
+      { text:'Открыть банковский счёт',                       urgency:'🔴 Первая неделя' },
+      { text:'Зарегистрироваться у GP',                       urgency:'🟠 Первые 2 недели' },
+      { text:'Подать на Universal Credit (если нужно)',       urgency:'🟠 Первые 2 недели' },
+      { text:'Уведомить HMRC / DVLA о новом адресе',          urgency:'🟡 При получении жилья' },
+      { text:'Зарегистрировать Council Tax',                  urgency:'🟡 При получении жилья' },
+      { text:'Завершить обмен водительских прав',             urgency:'🟡 В течение месяца' },
+      { text:'Зарегистрироваться у стоматолога',              urgency:'🟢 В первый месяц' },
+    ]},
+]
 
 function NavBtn({ id, icon, en, ru, uk, tab, dark, lang, switchTab }) {
   const active = tab === id
