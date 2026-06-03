@@ -2428,7 +2428,7 @@ const UK_GUIDE = [
     { text:'HMRC: gov.uk/tell-hmrc-change-address' },
     { text:'DVLA: gov.uk/tell-dvla-changed-address' },
     { text:'Council Tax — notify council immediately or you get backdated debt', critical:true },
-    { text:'Bank, GP, children's schools, insurance, utilities' },
+    { text:'Bank, GP, childrens schools, insurance, utilities' },
   ]},
 ]
 
