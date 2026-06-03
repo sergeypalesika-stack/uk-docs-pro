@@ -5,7 +5,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import * as DB from '@/lib/db'
-import type { Address, DocPhoto, Resume, ResumeFile } from '@/lib/db'
+import type { Address, DocPhoto, Resume, ResumeFile, JobApplication, JobApplicationFile } from '@/lib/db'
+import JobApplicationsTab from '@/components/JobApplicationsTab'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -19,7 +20,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru' | 'uk'
 type Theme   = 'light' | 'dark'
-type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'medical' | 'profile'
+type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'jobs' | 'medical' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
@@ -797,85 +798,13 @@ export default function AppContent() {
         </div>
       )}
 
-
-      {/* UK Guide Modal */}
+      {/* UK Guide */}
       {showGuide && (
-        <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 998, display: 'flex', flexDirection: 'column' }}>
-
-          {/* Guide Header */}
-          <div style={{ background: '#1e293b', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #334155' }}>
-            <button onClick={() => setShowGuide(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 22, cursor: 'pointer', padding: 0 }}>←</button>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>📖 UK Relocation Guide</div>
-            <div style={{ marginLeft: 'auto', fontSize: 11, color: '#475569' }}>Buckinghamshire Council</div>
-          </div>
-
-          {/* Section tabs (horizontal scroll) */}
-          <div style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto', background: '#1e293b', borderBottom: '1px solid #334155' }}>
-            {UK_GUIDE.map(function(s) { return (
-              <button key={s.id} onClick={() => setGuideSection(s.id)} style={{ flexShrink: 0, background: guideSection === s.id ? '#3b82f6' : '#0f172a', color: guideSection === s.id ? '#fff' : '#94a3b8', border: guideSection === s.id ? 'none' : '1px solid #334155', borderRadius: 20, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span>{s.icon}</span>
-                <span>{s.title}</span>
-                {s.priority === 'high' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />}
-              </button>
-            )})}
-          </div>
-
-          {/* Section content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-            {UK_GUIDE.filter(function(s){ return s.id === guideSection }).map(function(current) { return (
-              <div key={current.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <span style={{ fontSize: 26 }}>{current.icon}</span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>{current.title}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 99, background: current.priority === 'high' ? '#7f1d1d' : current.priority === 'medium' ? '#78350f' : '#1e293b', color: current.priority === 'high' ? '#fca5a5' : current.priority === 'medium' ? '#fcd34d' : '#94a3b8', fontWeight: 600 }}>
-                    {current.priority === 'high' ? '🔴 Важно' : current.priority === 'medium' ? '🟡 Нужно' : 'Инфо'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {current.isChecklist
-                    ? current.items.map(function(item, idx) { return (
-                        <div key={idx} onClick={() => { var k = current.id+'_'+idx; setGuideSection(function(prev){ return prev }); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#1e293b', borderRadius: 10, border: '1px solid #334155', cursor: 'default' }}>
-                          <span style={{ fontSize: 22 }}>{item.urgency.split(' ')[0]}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 14, color: '#e2e8f0' }}>{item.text}</div>
-                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{item.urgency.split(' ').slice(1).join(' ')}</div>
-                          </div>
-                        </div>
-                      )})
-                    : current.items.map(function(item, idx) { return (
-                        <div key={idx} style={{ padding: '11px 14px', background: item.critical ? '#1c1917' : '#1e293b', borderRadius: 10, borderLeft: item.critical ? '3px solid #f59e0b' : '3px solid #3b82f6' }}>
-                          {item.isLinks
-                            ? (
-                              <div>
-                                <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 8 }}>🔗 Полезные ссылки:</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                  {item.links.map(function(link) { return (
-                                    <a key={link.label} href={link.url} target="_blank" rel="noreferrer" style={{ padding: '5px 12px', background: '#1e40af', borderRadius: 6, color: '#93c5fd', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
-                                      {link.label} ↗
-                                    </a>
-                                  )})}
-                                </div>
-                              </div>
-                            )
-                            : (
-                              <div style={{ fontSize: 13, lineHeight: 1.6, color: item.critical ? '#fcd34d' : '#cbd5e1' }}>
-                                {item.critical && <span style={{ marginRight: 6 }}>⚠️</span>}
-                                {item.text}
-                              </div>
-                            )
-                          }
-                        </div>
-                      )})}
-                </div>
-              </div>
-            )})}
-          </div>
-
-          {/* Footer */}
-          <div style={{ padding: '8px 16px', background: '#1e293b', borderTop: '1px solid #334155', fontSize: 10, color: '#475569', textAlign: 'center' }}>
-            Источник: Buckinghamshire Council · обновлено сент. 2024
-          </div>
-        </div>
+        <UKGuide
+          onClose={() => setShowGuide(false)}
+          section={guideSection}
+          setSection={setGuideSection}
+        />
       )}
 
       {/* Photo viewer */}
@@ -1077,7 +1006,7 @@ export default function AppContent() {
               <span style={{ fontSize: 32 }}>📖</span>
               <div style={{ textAlign: 'left' }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>UK Relocation Guide</div>
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>eVisa · Банк · Работа · NHS · Жильё · Права</div>
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>eVisa · Bank · Work · NHS · Housing · Driving</div>
               </div>
               <span style={{ marginLeft: 'auto', fontSize: 20, opacity: 0.6 }}>›</span>
             </button>
@@ -1995,6 +1924,14 @@ export default function AppContent() {
           </div>
         )}
 
+        {tab === 'jobs' && user && (
+          <JobApplicationsTab
+            userId={user.id}
+            dark={dark}
+            lang={lang}
+          />
+        )}
+
         {tab === 'todo' && view === 'list' && (
           <>
             {/* Progress bar */}
@@ -2415,6 +2352,7 @@ export default function AppContent() {
         <NavBtn id="home"    icon="🏠" en="Home"    ru="Головна" uk="Головна"   tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="docs"    icon="📂" en="Docs"    ru="Доки"    uk="Доки"      tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="resume"  icon="📝" en="CV"      ru="CV"      uk="CV"        tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
+          <NavBtn id="jobs"    icon="💼" en="Jobs"    ru="Работа"    uk="Робота"    tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="medical" icon="🏥" en="Health"  ru="Здоровʼя" uk="Здоровʼя" tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
           <NavBtn id="profile" icon="👤" en="Profile" ru="Профіль" uk="Профіль"  tab={tab} dark={dark} lang={lang} switchTab={switchTab} />
       </div>
@@ -2427,79 +2365,155 @@ export default function AppContent() {
 
 // ── UK GUIDE DATA ─────────────────────────────────
 const UK_GUIDE = [
-  { id:'evisa',      icon:'🪪', title:'eVisa и статус',          priority:'high',
-    items:[
-      { text:'С марта 2025 BRP-карты НЕ принимаются — нужна eVisa', critical:true },
-      { text:'eVisa заменяет все физические документы (BRP, штампы, стикеры)' },
-      { text:'При устройстве на работу — подтверждать right-to-work через eVisa' },
-      { text:'Помощь: ukimmigration-support-webchat.homeoffice.gov.uk' },
+  { id:'checklist', icon:'✅', title:'First Steps Checklist', priority:'high', isChecklist:true, items:[
+    { text:'Check / get eVisa',                        urgency:'🔴 Immediately' },
+    { text:'Open a bank account',                      urgency:'🔴 First week' },
+    { text:'Register with a GP',                       urgency:'🟠 First 2 weeks' },
+    { text:'Apply for Universal Credit (if needed)',   urgency:'🟠 First 2 weeks' },
+    { text:'Notify HMRC / DVLA of new address',        urgency:'🟡 When you get housing' },
+    { text:'Register for Council Tax',                 urgency:'🟡 When you get housing' },
+    { text:'Exchange driving licence (if applicable)', urgency:'🟡 Within a month' },
+    { text:'Register with a dentist',                  urgency:'🟢 First month' },
+  ]},
+  { id:'evisa', icon:'🪪', title:'eVisa & Status', priority:'high', items:[
+    { text:'From March 2025 BRP cards are NOT accepted — eVisa required', critical:true },
+    { text:'eVisa replaces all physical documents (BRP, stamps, stickers)' },
+    { text:'Confirm right-to-work via eVisa when starting a job' },
+    { text:'Help: ukimmigration-support-webchat.homeoffice.gov.uk' },
+  ]},
+  { id:'bank', icon:'🏦', title:'Bank Account', priority:'high', items:[
+    { text:'Opening is free' },
+    { text:'Need: photo ID (driving licence) + proof of address (Home Office letter)' },
+    { text:'If refused — try a credit union (small fee)' },
+    { text:'Without an account you cannot receive salary or benefits', critical:true },
+  ]},
+  { id:'work', icon:'💼', title:'Work & Employment', priority:'high', items:[
+    { text:'When applying: CV + cover letter + application form' },
+    { text:'Ukrainian qualifications → UK equivalent: contact Buckinghamshire Council' },
+    { text:'Right to work confirmed via eVisa — employer must check' },
+    { text:'Job sites:', isLinks:true, links:[
+      {label:'Indeed', url:'https://uk.indeed.com/'},
+      {label:'Reed', url:'https://www.reed.co.uk/'},
+      {label:'Totaljobs', url:'https://www.totaljobs.com/'},
+      {label:'CV Library', url:'https://www.cv-library.co.uk/'},
+      {label:'Guardian Jobs', url:'https://jobs.theguardian.com/'},
     ]},
-  { id:'bank',       icon:'🏦', title:'Банковский счёт',          priority:'high',
-    items:[
-      { text:'Открытие бесплатно' },
-      { text:'Нужны: фото-ID (водит. права) + подтверждение адреса (письмо Home Office)' },
-      { text:'Если отказали — credit union (небольшая комиссия)' },
-      { text:'Без счёта нельзя получать зарплату и пособия', critical:true },
-    ]},
-  { id:'work',       icon:'💼', title:'Работа',                   priority:'high',
-    items:[
-      { text:'CV + cover letter + application form при подаче на вакансию' },
-      { text:'Украинские квалификации → британский эквивалент: Buckinghamshire Council' },
-      { text:'Право на работу подтверждается через eVisa' },
-      { text:'Indeed, Reed, Totaljobs, CV Library, Guardian Jobs', isLinks:true, links:[
-        {label:'Indeed', url:'https://uk.indeed.com/'},
-        {label:'Reed', url:'https://www.reed.co.uk/'},
-        {label:'Totaljobs', url:'https://www.totaljobs.com/'},
-        {label:'CV Library', url:'https://www.cv-library.co.uk/'},
-      ]},
-    ]},
-  { id:'benefits',   icon:'💷', title:'Пособия (Benefits)',        priority:'medium',
-    items:[
-      { text:'Universal Credit — основное пособие' },
-      { text:'Подача: gov.uk/universal-credit/how-to-claim' },
-      { text:'Нет денег в ожидании — запросить advance payment' },
-      { text:'При трудоустройстве выплаты пересчитываются автоматически' },
-    ]},
-  { id:'health',     icon:'🏥', title:'Медицина (NHS)',            priority:'high',
-    items:[
-      { text:'Зарегистрироваться у GP как можно скорее', critical:true },
-      { text:'Найти GP: nhs.uk/service-search/find-a-gp' },
-      { text:'Экстренно: 999 (угроза жизни), 111 (нужна помощь сейчас)' },
-      { text:'Психологическая помощь: Samaritans — 116 123 (24/7)' },
-    ]},
-  { id:'housing',    icon:'🏠', title:'Жильё',                    priority:'high',
-    items:[
-      { text:'Рынок аренды конкурентный — реагировать быстро', critical:true },
-      { text:'Local Housing Allowance (LHA) — помощь с арендой у частного лендлорда' },
-      { text:'Social Housing — дешевле, но длинные очереди' },
-      { text:'Мебель бесплатно: Freecycle, Facebook Marketplace' },
-    ]},
-  { id:'driving',    icon:'🚗', title:'Водительские права',        priority:'high',
-    items:[
-      { text:'Украинские права действительны до 3 лет (36 мес) после прибытия' },
-      { text:'Права до 28.12.2021 → обмен без экзамена через DVLA', critical:true },
-      { text:'Права после 28.12.2021 → нужен британский экзамен' },
-      { text:'Обмен: gov.uk/exchange-foreign-driving-licence' },
-    ]},
-  { id:'moving',     icon:'📦', title:'При переезде — уведомить',  priority:'medium',
-    items:[
-      { text:'HMRC: gov.uk/tell-hmrc-change-address' },
-      { text:'DVLA: gov.uk/tell-dvla-changed-address' },
-      { text:'Council Tax — уведомить совет сразу, иначе задолженность задним числом', critical:true },
-      { text:'Банк, GP, школы детей, страховые, коммунальные службы' },
-    ]},
-  { id:'checklist',  icon:'✅', title:'Чеклист первых шагов',      priority:'high', isChecklist:true,
-    items:[
-      { text:'Проверить/оформить eVisa',                      urgency:'🔴 Немедленно' },
-      { text:'Открыть банковский счёт',                       urgency:'🔴 Первая неделя' },
-      { text:'Зарегистрироваться у GP',                       urgency:'🟠 Первые 2 недели' },
-      { text:'Подать на Universal Credit (если нужно)',       urgency:'🟠 Первые 2 недели' },
-      { text:'Уведомить HMRC / DVLA о новом адресе',          urgency:'🟡 При получении жилья' },
-      { text:'Зарегистрировать Council Tax',                  urgency:'🟡 При получении жилья' },
-      { text:'Завершить обмен водительских прав',             urgency:'🟡 В течение месяца' },
-      { text:'Зарегистрироваться у стоматолога',              urgency:'🟢 В первый месяц' },
-    ]},
+  ]},
+  { id:'benefits', icon:'💷', title:'Benefits', priority:'medium', items:[
+    { text:'Universal Credit — main benefit for working-age people' },
+    { text:'Apply online: gov.uk/universal-credit/how-to-claim' },
+    { text:'No money while waiting — request advance payment' },
+    { text:'Payments recalculated automatically when you start work' },
+  ]},
+  { id:'health', icon:'🏥', title:'Healthcare (NHS)', priority:'high', items:[
+    { text:'Register with a GP as soon as possible', critical:true },
+    { text:'Find a GP: nhs.uk/service-search/find-a-gp' },
+    { text:'Emergency: 999 (life-threatening), 111 (need help now)' },
+    { text:'Mental health: Samaritans — 116 123 (24/7, free)' },
+    { text:'Standard prescription: £9.90 (many categories free)' },
+  ]},
+  { id:'housing', icon:'🏠', title:'Housing', priority:'high', items:[
+    { text:'Rental market is very competitive — respond to listings quickly', critical:true },
+    { text:'Local Housing Allowance (LHA) — help with private rent: lha-direct.voa.gov.uk' },
+    { text:'Social housing — cheaper but long waiting lists' },
+    { text:'Free/cheap furniture: Freecycle, Facebook Marketplace' },
+  ]},
+  { id:'driving', icon:'🚗', title:'Driving Licence', priority:'high', items:[
+    { text:'Ukrainian licence valid in UK for up to 3 years (36 months)' },
+    { text:'Licence issued BEFORE 28.12.2021 → exchange without exam via DVLA', critical:true },
+    { text:'Licence issued AFTER 28.12.2021 → UK driving test required' },
+    { text:'Exchange: gov.uk/exchange-foreign-driving-licence' },
+  ]},
+  { id:'moving', icon:'📦', title:'When Moving — Notify', priority:'medium', items:[
+    { text:'HMRC: gov.uk/tell-hmrc-change-address' },
+    { text:'DVLA: gov.uk/tell-dvla-changed-address' },
+    { text:'Council Tax — notify council immediately or you get backdated debt', critical:true },
+    { text:'Bank, GP, children's schools, insurance, utilities' },
+  ]},
 ]
+
+function UKGuide({ onClose, section, setSection }) {
+  const current = UK_GUIDE.find(function(s){ return s.id === section }) || UK_GUIDE[0]
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 998, display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ background: '#1e293b', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #334155' }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 24, cursor: 'pointer', padding: 0, lineHeight: 1 }}>←</button>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>📖 UK Relocation Guide</div>
+        <div style={{ marginLeft: 'auto', fontSize: 10, color: '#475569' }}>Buckinghamshire Council</div>
+      </div>
+      {/* Section tabs */}
+      <div style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto', background: '#1e293b', borderBottom: '1px solid #334155' }}>
+        {UK_GUIDE.map(function(s) {
+          return (
+            <button key={s.id} onClick={() => setSection(s.id)} style={{ flexShrink: 0, background: section === s.id ? '#3b82f6' : '#0f172a', color: section === s.id ? '#fff' : '#94a3b8', border: section === s.id ? 'none' : '1px solid #334155', borderRadius: 20, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span>{s.icon}</span>
+              <span style={{ whiteSpace: 'nowrap' }}>{s.title}</span>
+              {s.priority === 'high' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />}
+            </button>
+          )
+        })}
+      </div>
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <span style={{ fontSize: 26 }}>{current.icon}</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>{current.title}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 99, background: current.priority === 'high' ? '#7f1d1d' : current.priority === 'medium' ? '#78350f' : '#1e293b', color: current.priority === 'high' ? '#fca5a5' : current.priority === 'medium' ? '#fcd34d' : '#94a3b8', fontWeight: 600 }}>
+            {current.priority === 'high' ? '🔴 Important' : current.priority === 'medium' ? '🟡 Needed' : 'Info'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {current.isChecklist
+            ? current.items.map(function(item, idx) {
+                return (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#1e293b', borderRadius: 10, border: '1px solid #334155' }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{item.urgency.split(' ')[0]}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, color: '#e2e8f0' }}>{item.text}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{item.urgency.split(' ').slice(1).join(' ')}</div>
+                    </div>
+                  </div>
+                )
+              })
+            : current.items.map(function(item, idx) {
+                return (
+                  <div key={idx} style={{ padding: '12px 14px', background: item.critical ? '#1c1917' : '#1e293b', borderRadius: 10, borderLeft: item.critical ? '3px solid #f59e0b' : '3px solid #3b82f6' }}>
+                    {item.isLinks
+                      ? (
+                        <div>
+                          <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 8 }}>🔗 {item.text}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {item.links.map(function(link) {
+                              return (
+                                <a key={link.label} href={link.url} target="_blank" rel="noreferrer" style={{ padding: '5px 12px', background: '#1e40af', borderRadius: 6, color: '#93c5fd', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
+                                  {link.label} ↗
+                                </a>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                      : (
+                        <div style={{ fontSize: 13, lineHeight: 1.6, color: item.critical ? '#fcd34d' : '#cbd5e1' }}>
+                          {item.critical && <span style={{ marginRight: 6 }}>⚠️</span>}
+                          {item.text}
+                        </div>
+                      )
+                    }
+                  </div>
+                )
+              })
+          }
+        </div>
+      </div>
+      {/* Footer */}
+      <div style={{ padding: '8px 16px', background: '#1e293b', borderTop: '1px solid #334155', fontSize: 10, color: '#475569', textAlign: 'center' }}>
+        Source: Buckinghamshire Council · updated Sept 2024
+      </div>
+    </div>
+  )
+}
 
 function NavBtn({ id, icon, en, ru, uk, tab, dark, lang, switchTab }) {
   const active = tab === id
