@@ -12,7 +12,7 @@ import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
 // ── TYPES
-interface Doc { id: string; category: string; title: string; title_ru: string; number: string; valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean; member: string; document_photos?: DocPhoto[] }
+interface Doc { id: string; category: string; title: string; title_ru: string; number: string; valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean; member: string; document_photos?: DocPhoto[]; document_files?: any[] }
 interface PassportPhoto { id: string; label: string; data_url: string; added_at: string }
 interface Passport { id: string; type: string; number: string; issued_by: string; issued_date: string | null; expiry_date: string | null; notes: string; passport_photos: PassportPhoto[] }
 interface Profile { id: string; name: string; name_ru: string; dob: string; nationality: string; avatar: string }
@@ -102,6 +102,8 @@ export default function AppContent() {
   const passPhotoRef   = useRef(null)
   const passCameraRef  = useRef(null)
   const docPhotoRef    = useRef(null)
+  const docFileRef     = useRef(null)
+  const [docFileUploading, setDocFileUploading] = useState(false)
   const docCameraRef   = useRef(null)
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
@@ -685,6 +687,47 @@ export default function AppContent() {
     setSelDoc(updated)
   }
 
+  const handleUploadDocFile = async (file) => {
+    if (!user || !selDoc) return
+    const MAX_MB = 10
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert(t('File too large. Max 10MB.', 'Файл занадто великий. Макс 10МБ.', 'Файл занадто великий. Макс 10МБ.'))
+      return
+    }
+    setDocFileUploading(true)
+    const reader = new FileReader()
+    reader.onload = async e => {
+      const base64 = e.target?.result || ''
+      const df = await DB.addDocFile(selDoc.id, user.id, file.name, file.type, file.size, base64)
+      if (df) {
+        const updated = { ...selDoc, document_files: [...(selDoc.document_files || []), df] }
+        setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
+        setSelDoc(updated)
+      }
+      setDocFileUploading(false)
+    }
+    reader.onerror = () => setDocFileUploading(false)
+    reader.readAsDataURL(file)
+  }
+
+  const handleDeleteDocFile = async (fileId) => {
+    if (!selDoc) return
+    await DB.deleteDocFile(fileId)
+    const updated = { ...selDoc, document_files: (selDoc.document_files || []).filter(f => f.id !== fileId) }
+    setDocs(prev => prev.map(d => d.id === selDoc.id ? updated : d))
+    setSelDoc(updated)
+  }
+
+  const downloadDocFile = (file) => {
+    const a = document.createElement('a')
+    a.href = file.data_base64
+    a.download = file.name
+    a.click()
+  }
+
+  const fmtSize = (b) => b < 1024 ? b + 'B' : b < 1048576 ? Math.round(b/1024) + 'KB' : (b/1048576).toFixed(1) + 'MB'
+  const fmtIcon = (mime) => mime.includes('pdf') ? '📄' : mime.includes('word') || mime.includes('doc') ? '📝' : mime.includes('image') ? '🖼️' : '📎'
+
   const handleUpdateTodo = async () => {
     if (!selTodo) return
     const nt = todos.map(t => t.id === selTodo.id ? { ...t, text: todoForm.text, textRu: todoForm.textRu, category: todoForm.category, week: todoForm.week } : t)
@@ -823,6 +866,7 @@ export default function AppContent() {
       <input ref={resumeFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadResumeFile(f);if(resumeFileRef.current)resumeFileRef.current.value=''}} />
       <input ref={docPhotoRef}   type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docPhotoRef.current)docPhotoRef.current.value=''}} />
       <input ref={docCameraRef}  type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddDocPhoto(f);if(docCameraRef.current)docCameraRef.current.value=''}} />
+      <input ref={docFileRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleUploadDocFile(f);if(docFileRef.current)docFileRef.current.value=''}} />
       <input ref={passPhotoRef}  type="file" accept="image/*"                    style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passPhotoRef.current)passPhotoRef.current.value=''}} />
       <input ref={passCameraRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleAddPhoto(f);if(passCameraRef.current)passCameraRef.current.value=''}} />
 
@@ -1145,6 +1189,33 @@ export default function AppContent() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* ── ATTACHED FILES ── */}
+            <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                📎 {t('Files', 'Файли', 'Файли')}
+                <span style={{ background: C.bg, borderRadius: 20, padding: '2px 8px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{(selDoc.document_files || []).length}</span>
+              </div>
+              {(selDoc.document_files || []).map(df => (
+                <div key={df.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: C.bg, borderRadius: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 26, flexShrink: 0 }}>{fmtIcon(df.mime_type)}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{df.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{fmtSize(df.size_bytes)} · {formatDate(df.added_at)}</div>
+                  </div>
+                  <button onClick={() => downloadDocFile(df)} style={{ background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', fontSize: 16 }}>⬇️</button>
+                  <button onClick={() => handleDeleteDocFile(df.id)} style={{ background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.red, fontSize: 14 }}>🗑</button>
+                </div>
+              ))}
+              {docFileUploading ? (
+                <div style={{ textAlign: 'center', padding: '14px 0', color: C.muted, fontSize: 13 }}>⏳ {t('Uploading…', 'Завантаження…', 'Завантаження…')}</div>
+              ) : (
+                <button onClick={() => docFileRef.current && docFileRef.current.click()} style={{ width: '100%', background: C.navy, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  📎 {t('Attach File', 'Прикріпити файл', 'Прикріпити файл')}
+                </button>
+              )}
+              <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginTop: 6 }}>PDF · DOCX · XLS · TXT · max 10MB</div>
             </div>
 
             {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' }}>
