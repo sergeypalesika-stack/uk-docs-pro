@@ -104,6 +104,7 @@ export default function AppContent() {
   const docPhotoRef    = useRef(null)
   const docFileRef     = useRef(null)
   const [docFileUploading, setDocFileUploading] = useState(false)
+  const [viewHistory, setViewHistory] = useState([])
   const docCameraRef   = useRef(null)
   const [docPhotoLabel, setDocPhotoLabel] = useState('')
   const supabase = createClient()
@@ -331,7 +332,21 @@ export default function AppContent() {
   }
 
   const switchLang = () => { const nl = lang === 'ru' ? 'en' : lang === 'en' ? 'uk' : 'ru'; setLang(nl); localStorage.setItem('uk_lang', nl) }
-  const switchTab  = (tb) => { setTab(tb); setView('list'); setSelDoc(null); setSelPass(null); setSearch('') }
+  const switchTab  = (tb) => { setViewHistory([]); setTab(tb); setView('list'); setSelDoc(null); setSelPass(null); setSearch('') }
+
+  const pushView = (newView) => {
+    setViewHistory(prev => [...prev.slice(-9), view])
+    setView(newView)
+  }
+  const goBack = () => {
+    if (viewHistory.length > 0) {
+      const prev = viewHistory[viewHistory.length - 1]
+      setViewHistory(h => h.slice(0, -1))
+      setView(prev)
+    } else {
+      setView('list')
+    }
+  }
 
   // ── FILTERED DOCS
   const filteredDocs = docs.filter(d => {
@@ -1109,7 +1124,9 @@ export default function AppContent() {
         {tab === 'docs' && view === 'detail' && selDoc && (() => {
           const c = cat(selDoc.category)
           return (<>
-            <button onClick={() => { setView('list'); setSelDoc(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
+            <button onClick={() => { setSelDoc(null); goBack() }} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.navy, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <span style={{ fontSize: 18 }}>←</span> {t('Back', 'Назад', 'Назад')}
+            </button>
             <div style={{ background: `linear-gradient(135deg, ${c.color}, ${c.color}bb)`, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff', boxShadow: `0 8px 30px ${c.color}40` }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>{c.icon}</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{lang !== 'en' && selDoc.title_ru ? selDoc.title_ru : selDoc.title}</div>
@@ -1343,7 +1360,9 @@ export default function AppContent() {
         {/* ══ PASSPORT DETAIL ══ */}
         {tab === 'passport' && view === 'passportDetail' && selPass && (
           <>
-            <button onClick={() => { setView('list'); setSelPass(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
+            <button onClick={() => { setSelPass(null); goBack() }} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.navy, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <span style={{ fontSize: 18 }}>←</span> {t('Back', 'Назад', 'Назад')}
+            </button>
             <div style={{ background: 'linear-gradient(135deg, #0369a1, #0284c7)', borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📘</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{selPass.type}</div>
@@ -1494,7 +1513,9 @@ export default function AppContent() {
         {/* ══ ADDRESS DETAIL ══ */}
         {tab === 'address' && view === 'detail' && selAddr && (
           <>
-            <button onClick={() => { setView('list'); setSelAddr(null) }} style={{ background: 'none', border: 'none', color: C.blue, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', display: 'flex', alignItems: 'center', gap: 5 }}>← {t('Back', 'Назад', 'Назад')}</button>
+            <button onClick={() => { setSelAddr(null); goBack() }} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: C.navy, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <span style={{ fontSize: 18 }}>←</span> {t('Back', 'Назад', 'Назад')}
+            </button>
 
             {/* Hero */}
             <div style={{ background: `linear-gradient(135deg, ${selAddr.color}, ${selAddr.color}bb)`, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff' }}>
