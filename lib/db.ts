@@ -3,22 +3,22 @@ import { DEFAULT_TODOS } from './data'
 
 const sb = () => createClient()
 
-// ── ПРОФИЛЬ ────────────────────────────────────────
+// ── PROFILE ──────────────────────────────────────────
 export async function getProfile(userId: string) {
   const { data } = await sb().from('profiles').select('*').eq('id', userId).single()
-  возвращаемые данные
+  return data
 }
 
 export async function upsertProfile(userId: string, fields: {
-  имя?: строка; имя_ru?: строка; дата рождения?: строка; национальность?: строка; аватар?: строка
+  name?: string; name_ru?: string; dob?: string; nationality?: string; avatar?: string
 }) {
   return sb().from('profiles').upsert({ id: userId, ...fields }, { onConflict: 'id' })
 }
 
-// ── ДОКУМЕНТЫ ───────────────────────────────────────
+// ── DOCUMENTS ────────────────────────────────────────
 export async function getDocs(userId: string) {
   const { data } = await sb().from('documents').select('*').eq('user_id', userId).order('created_at', { ascending: false })
-  возвращаемые данные ?? []
+  return data ?? []
 }
 
 export async function addDoc(userId: string, doc: {
@@ -26,12 +26,12 @@ export async function addDoc(userId: string, doc: {
   valid_from: string | null; valid_until: string | null; notes: string; notes_ru: string; pinned: boolean
 }) {
   const { data } = await sb().from('documents').insert({ user_id: userId, ...doc }).select().single()
-  возвращаемые данные
+  return data
 }
 
 export async function updateDoc(id: string, fields: Partial<{
   pinned: boolean; title: string; title_ru: string
-  число: строка; valid_from: строка | null; valid_until: строка | null
+  number: string; valid_from: string | null; valid_until: string | null
   notes: string; notes_ru: string; category: string
 }>) {
   return sb().from('documents').update(fields).eq('id', id)
@@ -41,22 +41,22 @@ export async function deleteDoc(id: string) {
   return sb().from('documents').delete().eq('id', id)
 }
 
-// ── ПАСПОРТА ───────────────────────────────────────
+// ── PASSPORTS ────────────────────────────────────────
 export async function getPassports(userId: string) {
   const { data } = await sb()
     .from('passports')
     .select('*, passport_photos(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-  возвращаемые данные ?? []
+  return data ?? []
 }
 
 export async function addPassport(userId: string, p: {
-  тип: строка; номер: строка; выдан: строка
+  type: string; number: string; issued_by: string
   issued_date: string | null; expiry_date: string | null; notes: string
 }) {
   const { data } = await sb().from('passports').insert({ user_id: userId, ...p }).select().single()
-  возвращаемые данные
+  return data
 }
 
 export async function deletePassport(id: string) {
@@ -67,20 +67,20 @@ export async function addPassportPhoto(passportId: string, userId: string, label
   const { data } = await sb().from('passport_photos')
     .insert({ passport_id: passportId, user_id: userId, label, data_url: dataUrl })
     .select().single()
-  возвращаемые данные
+  return data
 }
 
 export async function deletePassportPhoto(id: string) {
   return sb().from('passport_photos').delete().eq('id', id)
 }
 
-// ── TODOS ───────────────────────────────────────────
+// ── TODOS ────────────────────────────────────────────
 export async function getTodos(userId: string) {
   const { data: rows } = await sb().from('todos').select('*').eq('user_id', userId)
-  // Объединить со списком задач по умолчанию, применив сохраненные состояния выполнения.
+  // Merge with default todos list, applying saved done states
   return DEFAULT_TODOS.map(t => ({
-    ...т,
-    выполнено: строки?.find(r => r.todo_key === t.id)?.done ?? false,
+    ...t,
+    done: rows?.find(r => r.todo_key === t.id)?.done ?? false,
   }))
 }
 
@@ -95,42 +95,42 @@ export async function resetTodosDB(userId: string) {
   return sb().from('todos').delete().eq('user_id', userId)
 }
 
-// ── Стандартная документация SEED для новых пользователей ───────────────────
+// ── SEED default docs for new user ──────────────────
 export async function seedDefaultDocs(userId: string) {
   const existing = await getDocs(userId)
-  if (existing.length > 0) return // документация уже есть
+  if (existing.length > 0) return // already has docs
 
   const defaults = [
-    { category: 'immigration', title: 'eVisa — Homes for Ukraine', title_ru: 'eVisa — Homes for Ukraine', number: '', valid_from: '2026-03-10', valid_until: '2027-09-10', notes: 'Status: Homes for Ukraine', notes_ru: 'Статус: Homes for Ukraine', pinned: true },
-    { category: 'иммиграция', title: 'Кодекс социального обеспечения — Право на работу', title_ru: 'Кодекс социального обеспечения — Право на работу', number: 'WZL F8D 7A4', valid_from: null, valid_until: '2026-07-20', notes: 'gov.uk/view-right-to-work', notes_ru: 'gov.uk/view-right-to-work', pinned: true },
-    { категория: 'иммиграция', title: 'Код акции — Иммиграционный статус', title_ru: 'Код акции - Иммиграционный статус', номер: 'SNX F8D 75D', valid_from: null, valid_until: '2026-07-20', примечания: 'gov.uk/check-immigration-status', Notes_ru: 'gov.uk/check-immigration-status', закреплено: false },
+    { category: 'immigration', title: 'eVisa — Homes for Ukraine', title_ru: 'eVisa — Дома для Украины', number: '', valid_from: '2026-03-10', valid_until: '2027-09-10', notes: 'Status: Homes for Ukraine', notes_ru: 'Статус: Homes for Ukraine', pinned: true },
+    { category: 'immigration', title: 'Share Code — Right to Work', title_ru: 'Share Code — Право на работу', number: 'WZL F8D 7A4', valid_from: null, valid_until: '2026-07-20', notes: 'gov.uk/view-right-to-work', notes_ru: 'gov.uk/view-right-to-work', pinned: true },
+    { category: 'immigration', title: 'Share Code — Immigration Status', title_ru: 'Share Code — Иммиграционный статус', number: 'SNX F8D 75D', valid_from: null, valid_until: '2026-07-20', notes: 'gov.uk/check-immigration-status', notes_ru: 'gov.uk/check-immigration-status', pinned: false },
   ]
   for (const doc of defaults) {
     await addDoc(userId, doc)
   }
 }
 
-// ── АДРЕСА ───────────────────────────────────────
-экспорт интерфейса Адрес {
-  id: строка
+// ── ADDRESSES ────────────────────────────────────────
+export interface Address {
+  id: string
   user_id: string
-  метка: строка
+  label: string
   label_ru: string
-  строка1: строка
-  строка2: строка
-  город: строка
-  почтовый индекс: строка
-  страна: строка
-  примечания: строка
-  is_home: логическое значение
-  цвет: строка
+  line1: string
+  line2: string
+  city: string
+  postcode: string
+  country: string
+  notes: string
+  is_home: boolean
+  color: string
   created_at: string
 }
 
 export async function getAddresses(userId: string) {
   const { data } = await sb()
     .from('addresses')
-    .выбирать('*')
+    .select('*')
     .eq('user_id', userId)
     .order('is_home', { ascending: false })
     .order('created_at', { ascending: true })
@@ -139,7 +139,7 @@ export async function getAddresses(userId: string) {
 
 export async function addAddress(userId: string, addr: Omit<Address, 'id' | 'user_id' | 'created_at'>) {
   const { data } = await sb().from('addresses').insert({ user_id: userId, ...addr }).select().single()
-  возвращаемые данные в виде адреса | null
+  return data as Address | null
 }
 
 export async function updateAddress(id: string, fields: Partial<Omit<Address, 'id' | 'user_id'>>) {
@@ -151,18 +151,18 @@ export async function deleteAddress(id: string) {
 }
 
 export async function setHomeAddress(userId: string, id: string) {
-  // Сначала снимите все флаги домашнего поля
+  // unset all home flags first
   await sb().from('addresses').update({ is_home: false }).eq('user_id', userId)
-  // установить новый дом
+  // set new home
   return sb().from('addresses').update({ is_home: true }).eq('id', id)
 }
 
-// ── ФОТОГРАФИИ ДОКУМЕНТА ──────────────────────────────────
-экспорт интерфейса DocPhoto {
-  id: строка
+// ── DOCUMENT PHOTOS ──────────────────────────────────
+export interface DocPhoto {
+  id: string
   document_id: string
   user_id: string
-  метка: строка
+  label: string
   data_url: string
   added_at: string
 }
@@ -170,7 +170,7 @@ export async function setHomeAddress(userId: string, id: string) {
 export async function getDocPhotos(documentId: string) {
   const { data } = await sb()
     .from('document_photos')
-    .выбирать('*')
+    .select('*')
     .eq('document_id', documentId)
     .order('added_at', { ascending: true })
   return (data ?? []) as DocPhoto[]
@@ -181,37 +181,37 @@ export async function addDocPhoto(documentId: string, userId: string, label: str
     .from('document_photos')
     .insert({ document_id: documentId, user_id: userId, label, data_url: dataUrl })
     .select().single()
-  возвращать данные в формате DocPhoto | null
+  return data as DocPhoto | null
 }
 
 export async function deleteDocPhoto(id: string) {
   return sb().from('document_photos').delete().eq('id', id)
 }
 
-// Получить все документы с фотографиями
+// Get all docs with their photos
 export async function getDocsWithPhotos(userId: string) {
   const { data } = await sb()
     .from('documents')
     .select('*, document_photos(*), document_files(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-  возвращаемые данные ?? []
+  return data ?? []
 }
 
-// ── Хранилище SUPABase (для фотографий) ─────────────────────
+// ── SUPABASE STORAGE (for photos) ────────────────────
 export async function uploadPhotoToStorage(
-  userId: строка,
-  файл: Blob,
-  путь: строка
+  userId: string,
+  file: Blob,
+  path: string
 ): Promise<string | null> {
   const { data, error } = await sb()
-    .хранилище
+    .storage
     .from('photos')
     .upload(`${userId}/${path}`, file, {
       contentType: 'image/jpeg',
       upsert: true,
     })
-  if (error) { console.error('Ошибка загрузки в хранилище:', error); return null }
+  if (error) { console.error('Storage upload error:', error); return null }
   const { data: urlData } = sb().storage.from('photos').getPublicUrl(data.path)
   return urlData.publicUrl
 }
@@ -220,13 +220,13 @@ export async function deletePhotoFromStorage(userId: string, path: string) {
   return sb().storage.from('photos').remove([`${userId}/${path}`])
 }
 
-// Обновлено: вместо base64 используется URL-адрес хранилища.
+// Updated: store URL instead of base64
 export async function addDocPhotoUrl(documentId: string, userId: string, label: string, photoUrl: string) {
   const { data } = await sb()
     .from('document_photos')
     .insert({ document_id: documentId, user_id: userId, label, data_url: photoUrl })
     .select().single()
-  возвращать данные в формате DocPhoto | null
+  return data as DocPhoto | null
 }
 
 export async function addPassportPhotoUrl(passportId: string, userId: string, label: string, photoUrl: string) {
@@ -234,24 +234,24 @@ export async function addPassportPhotoUrl(passportId: string, userId: string, la
     .from('passport_photos')
     .insert({ passport_id: passportId, user_id: userId, label, data_url: photoUrl })
     .select().single()
-  возвращаемые данные
+  return data
 }
 
-// ── РЕЗЮМЕ ────────────────────────────────────────
-экспорт интерфейса Возобновить {
-  id: строка
+// ── RESUMES ──────────────────────────────────────────
+export interface Resume {
+  id: string
   user_id: string
-  заголовок: строка
-  направление: строка
-  компания: строка
-  статус: 'черновик' | 'готов' | 'отправлен' | 'интервью' | 'отклонено'
-  краткое содержание: строка
-  навыки: строка
-  опыт: строка
-  образование: строка
-  примечания: строка
-  цвет: строка
-  закреплено: логическое значение
+  title: string
+  direction: string
+  company: string
+  status: 'draft' | 'ready' | 'sent' | 'interview' | 'rejected'
+  summary: string
+  skills: string
+  experience: string
+  education: string
+  notes: string
+  color: string
+  pinned: boolean
   created_at: string
   updated_at: string
 }
@@ -259,7 +259,7 @@ export async function addPassportPhotoUrl(passportId: string, userId: string, la
 export async function getResumes(userId: string) {
   const { data } = await sb()
     .from('resumes')
-    .выбирать('*')
+    .select('*')
     .eq('user_id', userId)
     .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false })
@@ -271,7 +271,7 @@ export async function addResume(userId: string, r: Omit<Resume, 'id' | 'user_id'
     .from('resumes')
     .insert({ user_id: userId, ...r, updated_at: new Date().toISOString() })
     .select().single()
-  возвращать данные в виде резюме | null
+  return data as Resume | null
 }
 
 export async function updateResume(id: string, fields: Partial<Omit<Resume, 'id' | 'user_id'>>) {
@@ -282,14 +282,14 @@ export async function deleteResume(id: string) {
   return sb().from('resumes').delete().eq('id', id)
 }
 
-// ── ФАЙЛЫ РЕЗЮМЕ ─────────────────────────────────────
-экспорт интерфейса ResumeFile {
-  id: строка
-  resume_id: строка
+// ── RESUME FILES ──────────────────────────────────────
+export interface ResumeFile {
+  id: string
+  resume_id: string
   user_id: string
-  имя: строка
+  name: string
   mime_type: string
-  размер_байтов: число
+  size_bytes: number
   data_base64: string
   added_at: string
 }
@@ -297,7 +297,7 @@ export async function deleteResume(id: string) {
 export async function getResumeFiles(resumeId: string) {
   const { data } = await sb()
     .from('resume_files')
-    .выбирать('*')
+    .select('*')
     .eq('resume_id', resumeId)
     .order('added_at', { ascending: false })
   return (data ?? []) as ResumeFile[]
@@ -308,7 +308,7 @@ export async function addResumeFile(resumeId: string, userId: string, name: stri
     .from('resume_files')
     .insert({ resume_id: resumeId, user_id: userId, name, mime_type: mimeType, size_bytes: sizeBytes, data_base64: dataBase64 })
     .select().single()
-  возвращать данные в виде ResumeFile | null
+  return data as ResumeFile | null
 }
 
 export async function deleteResumeFile(id: string) {
@@ -325,10 +325,10 @@ export async function getResumesWithFiles(userId: string) {
   return (data ?? []) as (Resume & { resume_files: ResumeFile[] })[]
 }
 
-// ── МЕДИЦИНСКИЙ ────────────────────────────────────────
-экспорт интерфейса MedicalRecord {
+// ── MEDICAL ──────────────────────────────────────────
+export interface MedicalRecord {
   id: string; user_id: string; type: string
-  заголовок: строка; значение: строка; примечания: строка
+  title: string; value: string; notes: string
   valid_until: string | null; created_at: string
 }
 
@@ -338,7 +338,7 @@ export async function getMedical(userId: string) {
 }
 export async function addMedical(userId: string, r: Omit<MedicalRecord,'id'|'user_id'|'created_at'>) {
   const { data } = await sb().from('medical').insert({ user_id: userId, ...r }).select().single()
-  возвращать данные в формате MedicalRecord | null
+  return data as MedicalRecord | null
 }
 export async function updateMedical(id: string, fields: Partial<MedicalRecord>) {
   return sb().from('medical').update(fields).eq('id', id)
@@ -347,10 +347,10 @@ export async function deleteMedical(id: string) {
   return sb().from('medical').delete().eq('id', id)
 }
 
-// ── КОНТАКТЫ НА СЛУЧАЙ ЧРЕЗВЫЧАЙНОЙ СИТУАЦИИ ────────────────────────────────
-экспорт интерфейса Контакты {
+// ── EMERGENCY CONTACTS ────────────────────────────────
+export interface Contact {
   id: string; user_id: string; name: string; relation: string
-  телефон: строка; заметки: строка; is_primary: логическое значение; created_at: строка
+  phone: string; notes: string; is_primary: boolean; created_at: string
 }
 
 export async function getContacts(userId: string) {
@@ -359,7 +359,7 @@ export async function getContacts(userId: string) {
 }
 export async function addContact(userId: string, c: Omit<Contact,'id'|'user_id'|'created_at'>) {
   const { data } = await sb().from('emergency_contacts').insert({ user_id: userId, ...c }).select().single()
-  возвращать данные в виде контакта | null
+  return data as Contact | null
 }
 export async function updateContact(id: string, fields: Partial<Contact>) {
   return sb().from('emergency_contacts').update(fields).eq('id', id)
@@ -368,10 +368,10 @@ export async function deleteContact(id: string) {
   return sb().from('emergency_contacts').delete().eq('id', id)
 }
 
-// ── ФАЙЛЫ ДОКУМЕНТОВ ────────────────────────────────────
-экспорт интерфейса DocFile {
+// ── DOCUMENT FILES ────────────────────────────────────
+export interface DocFile {
   id: string; document_id: string; user_id: string
-  имя: строка; MIME-тип: строка; размер в байтах: число
+  name: string; mime_type: string; size_bytes: number
   data_base64: string; added_at: string
 }
 export async function getDocFiles(documentId: string) {
@@ -380,7 +380,7 @@ export async function getDocFiles(documentId: string) {
 }
 export async function addDocFile(documentId: string, userId: string, name: string, mimeType: string, sizeBytes: number, dataBase64: string) {
   const { data } = await sb().from('document_files').insert({ document_id: documentId, user_id: userId, name, mime_type: mimeType, size_bytes: sizeBytes, data_base64: dataBase64 }).select().single()
-  возвращать данные в формате DocFile | null
+  return data as DocFile | null
 }
 export async function deleteDocFile(id: string) {
   return sb().from('document_files').delete().eq('id', id)
