@@ -239,8 +239,11 @@ export default function AppContent() {
         d.notes || '',
       ])
     })
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const NEWLINE = String.fromCharCode(10)
+    const COMMA = ','
+    const QUOTE = '"'
+    const csv = rows.map(r => r.map(v => QUOTE + String(v).replace(new RegExp(QUOTE, 'g'), QUOTE+QUOTE) + QUOTE).join(COMMA)).join(NEWLINE)
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
