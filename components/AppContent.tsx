@@ -21,7 +21,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 type Lang    = 'en' | 'ru' | 'uk'
 type Theme   = 'light' | 'dark'
 type MainTab = 'home' | 'docs' | 'passport' | 'todo' | 'address' | 'resume' | 'jobs' | 'medical' | 'profile'
-type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'editTodo' | 'addTodo' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
+type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
 const C = { navy: '#0f1f3d', navyM: '#1a2e50', blue: '#2457a4', accent: '#3b82f6', surface: '#ffffff', bg: '#f1f5fb', border: '#e2e8f4', muted: '#7a8aaa', text: '#1a2035', textSub: '#4a5570', red: '#dc2626', green: '#16a34a' }
@@ -190,11 +190,10 @@ export default function AppContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUser(user)
-      const [prof, docs, passes, todos, addrs, res, med, ctcts, fin] = await Promise.all([
+      const [prof, docs, passes, addrs, res, med, ctcts, fin] = await Promise.all([
         DB.getProfile(user.id),
         DB.getDocsWithPhotos(user.id),
         DB.getPassports(user.id),
-        DB.getTodos(user.id),
         DB.getAddresses(user.id),
         DB.getResumesWithFiles(user.id),
         DB.getMedical(user.id),
@@ -207,7 +206,7 @@ export default function AppContent() {
       setPassports(passes)
       setTodos(todos)
       setAddresses(addrs)
-      setResumes(res as (Resume & { resume_files: ResumeFile[] })[])
+      setResumes(res)
       setMedical(med)
       setContacts(ctcts)
       setFinance(fin)
@@ -1100,24 +1099,7 @@ export default function AppContent() {
               ))}
             </div>
 
-            {/* Next tasks */}
-            {todos.filter(t => !t.done).length > 0 && (
-              <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: D.navy }}>✅ {t('Next Tasks', 'Наступні завдання', 'Наступні завдання')}</span>
-                  <button onClick={() => switchTab('todo')} style={{ background: 'none', border: 'none', color: D.blue, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t('All','Всі','Всі')} →</button>
-                </div>
-                <div style={{ background: D.bg, borderRadius: 10, height: 6, marginBottom: 12, overflow: 'hidden' }}>
-                  <div style={{ background: `linear-gradient(90deg,${C.accent},#22c55e)`, height: '100%', width: `${todos.length ? todoDone/todos.length*100 : 0}%`, borderRadius: 99 }} />
-                </div>
-                {todos.filter(t => !t.done).slice(0, 3).map(item => (
-                  <div key={item.id} onClick={() => handleToggleTodo(item)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
-                    <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${D.border}`, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: D.text }}>{lang !== 'en' ? item.textRu || item.text : item.text}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+
 
             {/* Emergency contacts quick access */}
             {contacts.length > 0 && (
@@ -2100,165 +2082,6 @@ export default function AppContent() {
           />
         )}
 
-        {tab === 'todo' && view === 'list' && (
-          <>
-            {/* Progress bar */}
-            <div style={{ background: C.surface, borderRadius: 16, padding: '18px 20px', marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{t('Progress', 'Прогрес', 'Прогрес')}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.blue }}>{todoDone}/{todos.length}</span>
-              </div>
-              <div style={{ background: C.bg, borderRadius: 99, height: 10, overflow: 'hidden' }}>
-                <div style={{ background: `linear-gradient(90deg, ${C.accent}, #22c55e)`, height: '100%', borderRadius: 99, width: `${todos.length ? (todoDone / todos.length * 100) : 0}%`, transition: 'width 0.4s ease' }} />
-              </div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{todos.length - todoDone} {t('remaining', 'залишилось', 'залишилось')}</div>
-            </div>
-
-            {Array.from(new Set(todos.map(t => t.week))).sort((a, b) => a - b).map(w => {
-              const wL = {
-                0: { en: '📅 Days 1–2 · Arrival', ru: '📅 Дни 1–2 · Прибытие' },
-                1: { en: '📅 Days 3–5 · Critical Steps', ru: '📅 Дни 3–5 · Критически важные шаги' },
-                2: { en: '📅 Week 2 · Housing & School', ru: '📅 Неделя 2 · Жильё и школа' },
-                3: { en: '📅 Week 3 · Benefits & Finances', ru: '📅 Неделя 3 · Пособия и финансы' },
-                4: { en: '📅 Week 3–4 · Work', ru: '📅 Неделя 3–4 · Работа' },
-                5: { en: '📅 Week 4–5 · Infrastructure', ru: '📅 Неделя 4–5 · Обустройство' },
-                6: { en: '📅 Week 6 · Final Checklist', ru: '📅 Неделя 6 · Итоговая проверка' },
-                7: { en: '📅 Later', ru: '📅 Позже' },
-              }
-              const items = todos.filter(t => t.week === w)
-              const doneH = items.filter(t => t.done).length
-              return (
-                <div key={w} style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.blue }}>
-                      {lang !== 'en' ? wL[w]?.ru : wL[w]?.en}
-                    </div>
-                    <span style={{ fontSize: 11, color: C.muted }}>{doneH}/{items.length}</span>
-                  </div>
-                  <div style={{ background: C.surface, borderRadius: 14, overflow: 'hidden' }}>
-                    {items.map((item, i) => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: i < items.length - 1 ? `1px solid ${C.border}` : 'none', background: item.done ? '#f0fdf4' : C.surface }}>
-                        {/* Checkbox */}
-                        <div onClick={() => handleToggleTodo(item)} style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: item.done ? '#22c55e' : 'transparent', border: item.done ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
-                          {item.done ? '✓' : ''}
-                        </div>
-                        {/* Text */}
-                        <div onClick={() => handleToggleTodo(item)} style={{ flex: 1, fontSize: 13, color: item.done ? '#4ade80' : C.text, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4, cursor: 'pointer' }}>
-                          {lang !== 'en' ? item.textRu || item.text : item.text}
-                        </div>
-                        <span style={{ fontSize: 14 }}>{CATEGORIES.find(c => c.id === item.category)?.icon || '📁'}</span>
-                        {/* Edit button */}
-                        <button onClick={() => { setSelTodo(item); setTodoForm({ text: item.text, textRu: item.textRu, category: item.category, week: item.week }); setView('editTodo') }}
-                          style={{ background: '#eff6ff', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.blue, flexShrink: 0 }}>
-                          ✏️
-                        </button>
-                        {/* Delete button */}
-                        <button onClick={() => { setConfirmDel(item.id) }}
-                          style={{ background: '#fee2e2', border: 'none', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', fontSize: 12, color: C.red, flexShrink: 0 }}>
-                          🗑
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Inline confirm delete for todo */}
-                  {items.some(i => i.id === confirmDel) && (
-                    <div style={{ background: '#fee2e2', borderRadius: 10, padding: '12px 14px', marginTop: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ flex: 1, fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{t('Delete this task?', 'Видалити це завдання?', 'Видалити це завдання?')}</span>
-                      <button onClick={() => setConfirmDel(null)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 10px', cursor: 'pointer', fontSize: 12 }}>{t('No', 'Нет')}</button>
-                      <button onClick={() => { const id = confirmDel!; handleDeleteTodo(id) }} style={{ background: C.red, border: 'none', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 700 }}>{t('Yes', 'Да')}</button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {/* Bottom actions */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-              <button onClick={handleResetTodos} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.textSub }}>
-                🔄 {t('Reset all', 'Скинути', 'Скинути')}
-              </button>
-              <button onClick={() => { setTodoForm({ text: '', textRu: '', category: 'other', week: 1 }); setView('addTodo') }} style={{ flex: 2, background: C.blue, border: 'none', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#fff' }}>
-                + {t('Add custom task', 'Додати завдання', 'Додати завдання')}
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* ══ ADD TODO ══ */}
-        {tab === 'todo' && view === 'addTodo' && (
-          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>➕ {t('New Task', 'Нове завдання', 'Нове завдання')}</div>
-            <FField label={t('Task (EN)', 'Задача (EN)')}><input value={todoForm.text} onChange={e => setTodoForm(f => ({ ...f, text: e.target.value }))} placeholder="e.g. Book GP appointment" style={inputStyle} /></FField>
-            <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} placeholder="напр. Записаться к врачу" style={inputStyle} /></FField>
-            <FField label={t('Week', 'Тиждень', 'Тиждень')}>
-              <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
-                <option value={0}>{t('Days 1-2 Arrival', 'Дни 1-2 Прибытие')}</option>
-                <option value={1}>{t('Days 3-5 Critical Steps', 'Дни 3-5 Критически важные')}</option>
-                <option value={2}>{t('Week 2 Housing School', 'Неделя 2 Жильё и школа')}</option>
-                <option value={3}>{t('Week 3 Benefits', 'Неделя 3 Пособия и финансы')}</option>
-                <option value={4}>{t('Week 3-4 Work', 'Неделя 3-4 Работа')}</option>
-                <option value={5}>{t('Week 4-5 Infrastructure', 'Неделя 4-5 Обустройство')}</option>
-                <option value={6}>{t('Week 6 Final', 'Неделя 6 Итоговая проверка')}</option>
-                <option value={7}>{t('Later', 'Позже')}</option>
-              </select>
-            </FField>
-            <FField label={t('Category', 'Категорія', 'Категорія')}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <span style={{ fontSize: 18 }}>{c.icon}</span>
-                    <span>{lang !== 'en' ? c.labelRu : c.label}</span>
-                  </button>
-                ))}
-              </div>
-            </FField>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setView('list')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
-              <button onClick={handleAddTodo} disabled={!todoForm.text} style={{ flex: 2, background: todoForm.text ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: todoForm.text ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{t('Add Task', 'Додати завдання', 'Додати завдання')}</button>
-            </div>
-          </div>
-        )}
-
-        {/* ══ EDIT TODO ══ */}
-        {tab === 'todo' && view === 'editTodo' && selTodo && (
-          <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Task', 'Редагувати завдання', 'Редагувати завдання')}</div>
-            <FField label={t('Task (EN)', 'Задача (EN)')}><input value={todoForm.text} onChange={e => setTodoForm(f => ({ ...f, text: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Task (RU)', 'Задача (RU)')}><input value={todoForm.textRu} onChange={e => setTodoForm(f => ({ ...f, textRu: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Week', 'Тиждень', 'Тиждень')}>
-              <select value={todoForm.week} onChange={e => setTodoForm(f => ({ ...f, week: Number(e.target.value) }))} style={inputStyle}>
-                <option value={0}>{t('Days 1-2 Arrival', 'Дни 1-2 Прибытие')}</option>
-                <option value={1}>{t('Days 3-5 Critical Steps', 'Дни 3-5 Критически важные')}</option>
-                <option value={2}>{t('Week 2 Housing School', 'Неделя 2 Жильё и школа')}</option>
-                <option value={3}>{t('Week 3 Benefits', 'Неделя 3 Пособия и финансы')}</option>
-                <option value={4}>{t('Week 3-4 Work', 'Неделя 3-4 Работа')}</option>
-                <option value={5}>{t('Week 4-5 Infrastructure', 'Неделя 4-5 Обустройство')}</option>
-                <option value={6}>{t('Week 6 Final', 'Неделя 6 Итоговая проверка')}</option>
-                <option value={7}>{t('Later', 'Позже')}</option>
-              </select>
-            </FField>
-            <FField label={t('Category', 'Категорія', 'Категорія')}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setTodoForm(f => ({ ...f, category: c.id }))} style={{ background: todoForm.category === c.id ? c.color : C.bg, color: todoForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${todoForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '8px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <span style={{ fontSize: 18 }}>{c.icon}</span>
-                    <span>{lang !== 'en' ? c.labelRu : c.label}</span>
-                  </button>
-                ))}
-              </div>
-            </FField>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => { setSelTodo(null); setView('list') }} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
-              <button onClick={handleUpdateTodo} disabled={!todoForm.text} style={{ flex: 2, background: todoForm.text ? C.navy : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: todoForm.text ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>{t('Save Changes', 'Зберегти', 'Зберегти')}</button>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════ PROFILE TAB ══════════ */}
-
-
-        {/* ══════════════ FINANCE TAB ══════════════ */}
         {tab === 'finance' && (() => {
           const curYear = new Date().getFullYear().toString()
           const allMonths = [...new Set(finance.map(e => e.date.slice(0,7)))].sort().reverse()
@@ -2743,7 +2566,7 @@ export default function AppContent() {
                 {[
                   { icon: '📄', count: docs.length,      label: t('Documents','Документи','Документи') },
                   { icon: '📍', count: addresses.length,  label: t('Addresses','Адреси','Адреси') },
-                  { icon: '✅', count: todos.filter(t=>t.done).length + '/' + todos.length, label: t('Tasks','Завдання','Завдання') },
+    
                 ].map((s,i) => (
                   <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
                     <div style={{ fontSize: 20 }}>{s.icon}</div>
