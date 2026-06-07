@@ -633,6 +633,143 @@ export default function AppContent() {
   const TAX_ALLOWANCE = 12570
 
   const fmtGBP = (n) => '£' + Number(n).toFixed(2)
+
+  const generateCSV = () => {
+    const rows = [
+      ['Date', 'Type', 'Category', 'Description', 'Amount (GBP)'],
+      ...finance.sort((a,b) => a.date.localeCompare(b.date)).map(e => {
+        const cat = EXP_CATS.find(c => c.id === e.category)
+        return [e.date, e.type === 'income' ? 'INCOME' : 'EXPENSE', cat ? cat.label : e.category, e.note || (e.type === 'income' ? 'Delivery income' : e.category), e.amount.toFixed(2)]
+      })
+    ]
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('
+')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'uk-finance-' + new Date().getFullYear() + '.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const generatePDFReport = () => {
+    const name = profile?.name || user?.email || 'Self-employed'
+    const curYear = new Date().getFullYear().toString()
+    const taxYearStart = (parseInt(curYear) - 1) + '/2024'
+    
+    const yIncome   = finance.filter(e => e.type === 'income'  && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
+    const yExpenses = finance.filter(e => e.type === 'expense' && e.date.startsWith(curYear) && e.category !== 'mileage').reduce((s,e) => s + Number(e.amount), 0)
+    const yMileage  = finance.filter(e => e.category === 'mileage' && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
+    const yProfit   = yIncome - yExpenses - yMileage
+    const taxable   = Math.max(0, yProfit - 12570)
+    const estTax    = taxable * 0.20
+    const estNI     = yProfit > 12570 ? (yProfit - 12570) * 0.09 : 0
+
+    const expByCategory = EXP_CATS.map(cat => ({
+      ...cat,
+      total: finance.filter(e => e.type === 'expense' && e.category === cat.id && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
+    })).filter(c => c.total > 0)
+
+    const incomeRows = finance.filter(e => e.type === 'income' && e.date.startsWith(curYear)).sort((a,b) => a.date.localeCompare(b.date)).map(e => `<tr><td>${e.date}</td><td>${e.note || 'Delivery income'}</td><td style="text-align:right;color:#166534;font-weight:600">${fmtGBP(e.amount)}</td></tr>`).join('')
+    const expenseRows = finance.filter(e => e.type === 'expense' && e.date.startsWith(curYear)).sort((a,b) => a.date.localeCompare(b.date)).map(e => { const cat = EXP_CATS.find(c => c.id === e.category); return `<tr><td>${e.date}</td><td>${cat ? cat.icon + ' ' + cat.label : e.category}</td><td>${e.note || ''}</td><td style="text-align:right;color:#991b1b;font-weight:600">${fmtGBP(e.amount)}</td></tr>` }).join('')
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Self Assessment Report ${curYear} — ${name}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #111; padding: 30px; max-width: 800px; margin: 0 auto; }
+  .header { background: #003078; color: white; padding: 20px 24px; border-radius: 4px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; margin-bottom: 4px; }
+  .header p { font-size: 13px; opacity: 0.8; }
+  .crown { font-size: 28px; float: right; }
+  .section { margin-bottom: 24px; }
+  .section-title { background: #f3f4f6; border-left: 4px solid #003078; padding: 8px 12px; font-weight: 700; font-size: 14px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #003078; color: white; padding: 8px 10px; text-align: left; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .summary-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; }
+  .summary-box h3 { font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 8px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .summary-row.total { font-weight: 700; border-top: 2px solid #003078; border-bottom: none; margin-top: 4px; padding-top: 8px; }
+  .sa103 { background: #fefce8; border: 2px solid #eab308; border-radius: 6px; padding: 16px; }
+  .sa103 h3 { color: #92400e; font-size: 14px; margin-bottom: 12px; }
+  .sa103-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #fde68a; font-size: 13px; }
+  .sa103-box { background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 10px; font-weight: 700; min-width: 100px; text-align: right; }
+  .warning { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; padding: 10px 14px; font-size: 11px; color: #92400e; margin-top: 16px; }
+  .footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; text-align: center; }
+  @media print { body { padding: 20px; } button { display: none; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="crown">👑</span>
+  <h1>Self Assessment Summary</h1>
+  <p>Tax Year: 6 April ${parseInt(curYear)-1} – 5 April ${curYear} &nbsp;|&nbsp; Prepared: ${new Date().toLocaleDateString('en-GB')} &nbsp;|&nbsp; <strong>${name}</strong></p>
+</div>
+
+<div class="summary-grid">
+  <div class="summary-box">
+    <h3>📊 Profit & Loss Summary</h3>
+    <div class="summary-row"><span>Total Income</span><span style="color:#166534;font-weight:600">${fmtGBP(yIncome)}</span></div>
+    <div class="summary-row"><span>Business Expenses</span><span style="color:#991b1b">− ${fmtGBP(yExpenses)}</span></div>
+    <div class="summary-row"><span>Mileage Allowance</span><span style="color:#991b1b">− ${fmtGBP(yMileage)}</span></div>
+    <div class="summary-row total"><span>Net Profit</span><span style="color:#1d4ed8">${fmtGBP(yProfit)}</span></div>
+  </div>
+  <div class="summary-box">
+    <h3>💷 Estimated Tax (2024/25)</h3>
+    <div class="summary-row"><span>Net Profit</span><span>${fmtGBP(yProfit)}</span></div>
+    <div class="summary-row"><span>Personal Allowance</span><span>− ${fmtGBP(Math.min(yProfit, 12570))}</span></div>
+    <div class="summary-row"><span>Taxable Income</span><span>${fmtGBP(taxable)}</span></div>
+    <div class="summary-row"><span>Income Tax (20%)</span><span style="color:#991b1b">${fmtGBP(estTax)}</span></div>
+    <div class="summary-row"><span>Class 4 NI (9%)</span><span style="color:#991b1b">${fmtGBP(estNI)}</span></div>
+    <div class="summary-row total"><span>Total Est. Tax</span><span style="color:#991b1b">${fmtGBP(estTax + estNI)}</span></div>
+  </div>
+</div>
+
+<div class="sa103">
+  <h3>📋 SA103 Self-Employment (Short) — Key Figures</h3>
+  <div class="sa103-row"><span>Box 9 — Turnover (total income)</span><div class="sa103-box">${fmtGBP(yIncome)}</div></div>
+  <div class="sa103-row"><span>Box 17 — Allowable business expenses</span><div class="sa103-box">${fmtGBP(yExpenses + yMileage)}</div></div>
+  <div class="sa103-row"><span>Box 28 — Net profit</span><div class="sa103-box">${fmtGBP(yProfit)}</div></div>
+  <div class="warning">⚠️ These figures are estimates. Enter them in your online Self Assessment at gov.uk/file-your-self-assessment-tax-return. Deadline: 31 January.</div>
+</div>
+
+<div class="section" style="margin-top:24px">
+  <div class="section-title">💰 Income — All Entries (${curYear})</div>
+  <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${incomeRows || '<tr><td colspan="3" style="text-align:center;color:#6b7280">No income recorded</td></tr>'}</table>
+</div>
+
+<div class="section">
+  <div class="section-title">📦 Expenses by Category (${curYear})</div>
+  <table><tr><th>Category</th><th>Total</th></tr>
+  ${expByCategory.map(c => `<tr><td>${c.icon} ${c.label}</td><td style="font-weight:600;color:#991b1b">${fmtGBP(c.total)}</td></tr>`).join('')}
+  ${yMileage > 0 ? `<tr><td>🚗 Mileage Allowance</td><td style="font-weight:600;color:#991b1b">${fmtGBP(yMileage)}</td></tr>` : ''}
+  <tr style="font-weight:700;background:#f9fafb"><td>TOTAL EXPENSES</td><td style="color:#991b1b">${fmtGBP(yExpenses + yMileage)}</td></tr></table>
+</div>
+
+<div class="section">
+  <div class="section-title">🧾 All Expense Entries (${curYear})</div>
+  <table><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr>${expenseRows || '<tr><td colspan="4" style="text-align:center;color:#6b7280">No expenses recorded</td></tr>'}</table>
+</div>
+
+<div class="footer">
+  Generated by UK Docs App · ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})} · For HMRC Self Assessment purposes only · Always verify figures with a qualified accountant
+</div>
+<script>window.onload = function(){ window.print() }</script>
+</body></html>`
+
+    const w = window.open('', '_blank', 'width=900,height=700')
+    if (w) {
+      w.document.write(html)
+      w.document.close()
+    }
+  }
   const finMonthLabel = (ym) => { const [y,m] = ym.split('-'); return new Date(y, m-1).toLocaleDateString('en-GB', { month:'long', year:'numeric' }) }
 
   const addMileage = async () => {
@@ -2135,7 +2272,7 @@ export default function AppContent() {
 
               {/* Sub-tabs */}
               <div style={{ display:'flex', borderBottom:'1px solid #21262d', padding:'0 20px', marginBottom:0 }}>
-                {[['log',t('Income','Дохід','Дохід')],['expenses',t('Expenses','Витрати','Витрати')],['mileage','Mileage'],['summary',t('Summary','Підсумок','Підсумок')],['deadlines','HMRC']].map(([id,label]) => (
+                {[['log',t('Income','Дохід','Дохід')],['expenses',t('Expenses','Витрати','Витрати')],['mileage','Mileage'],['summary',t('Summary','Підсумок','Підсумок')],['deadlines','HMRC'],['report','📤 Export']].map(([id,label]) => (
                   <button key={id} onClick={() => setFinTab(id)} style={{ background:'none', border:'none', borderBottom:`2px solid ${finTab===id?'#58a6ff':'transparent'}`, color: finTab===id?'#58a6ff':'#8b949e', padding:'10px 14px 10px 0', marginRight:4, cursor:'pointer', fontSize:13, fontWeight:finTab===id?600:400 }}>
                     {label}
                   </button>
@@ -2388,6 +2525,78 @@ export default function AppContent() {
                     </div>
                   </div>
                 )}
+              </div>
+
+                {/* EXPORT REPORT TAB */}
+                {finTab === 'report' && (() => {
+                  const curYear = new Date().getFullYear().toString()
+                  const yIncome   = finance.filter(e => e.type === 'income'  && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
+                  const yExpenses = finance.filter(e => e.type === 'expense' && e.date.startsWith(curYear) && e.category !== 'mileage').reduce((s,e) => s + Number(e.amount), 0)
+                  const yMileage  = finance.filter(e => e.category === 'mileage' && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
+                  const yProfit   = yIncome - yExpenses - yMileage
+                  const estTax    = Math.max(0, yProfit - 12570) * 0.20
+                  const estNI     = yProfit > 12570 ? (yProfit - 12570) * 0.09 : 0
+                  return (
+                    <div>
+                      {/* Summary preview */}
+                      <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
+                        <div style={{ fontSize:11, color:'#58a6ff', marginBottom:12, textTransform:'uppercase', letterSpacing:1 }}>📊 Tax Year {curYear} Summary</div>
+                        {[
+                          ['Total Income',         fmtGBP(yIncome),             '#3fb950'],
+                          ['Business Expenses',    '− ' + fmtGBP(yExpenses),    '#f85149'],
+                          ['Mileage Allowance',    '− ' + fmtGBP(yMileage),     '#f85149'],
+                          ['Net Profit (Box 28)',  fmtGBP(yProfit),             '#58a6ff'],
+                          ['≈ Income Tax',         fmtGBP(estTax),              '#f85149'],
+                          ['≈ NI',                 fmtGBP(estNI),               '#f85149'],
+                          ['≈ Total Tax',          fmtGBP(estTax + estNI),      '#f85149'],
+                        ].map(([l,v,c]) => (
+                          <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #21262d' }}>
+                            <span style={{ fontSize:12, color:'#8b949e' }}>{l}</span>
+                            <span style={{ fontSize:13, fontWeight:600, color:c }}>{v}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Export buttons */}
+                      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                        <button onClick={generatePDFReport} style={{ background:'linear-gradient(135deg,#003078,#1d4ed8)', border:'none', borderRadius:14, padding:'18px 20px', cursor:'pointer', display:'flex', alignItems:'center', gap:14, textAlign:'left', color:'#fff' }}>
+                          <span style={{ fontSize:32 }}>🖨️</span>
+                          <div>
+                            <div style={{ fontSize:15, fontWeight:700, marginBottom:3 }}>Self Assessment Report (PDF)</div>
+                            <div style={{ fontSize:12, opacity:0.75 }}>Full report · SA103 key figures · Print or save as PDF</div>
+                          </div>
+                        </button>
+
+                        <button onClick={generateCSV} style={{ background:'#0d2b0d', border:'1px solid #3fb950', borderRadius:14, padding:'18px 20px', cursor:'pointer', display:'flex', alignItems:'center', gap:14, textAlign:'left', color:'#3fb950' }}>
+                          <span style={{ fontSize:32 }}>📊</span>
+                          <div>
+                            <div style={{ fontSize:15, fontWeight:700, marginBottom:3 }}>Export to CSV (Excel)</div>
+                            <div style={{ fontSize:12, opacity:0.75 }}>All income & expenses · Opens in Excel or Google Sheets</div>
+                          </div>
+                        </button>
+
+                        <div style={{ background:'#1c1917', border:'1px solid #78350f', borderRadius:12, padding:'14px 16px' }}>
+                          <div style={{ fontSize:12, color:'#f59e0b', fontWeight:700, marginBottom:8 }}>📋 SA103 Short Form — Box Reference</div>
+                          {[
+                            ['Box 9',  'Turnover',                         fmtGBP(yIncome)],
+                            ['Box 17', 'Total allowable expenses',         fmtGBP(yExpenses + yMileage)],
+                            ['Box 28', 'Net profit',                       fmtGBP(yProfit)],
+                          ].map(([box,label,val]) => (
+                            <div key={box} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom:'1px solid #292524' }}>
+                              <span style={{ background:'#003078', color:'#fff', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:4, flexShrink:0 }}>{box}</span>
+                              <span style={{ flex:1, fontSize:12, color:'#e7e5e4' }}>{label}</span>
+                              <span style={{ fontSize:13, fontWeight:700, color:'#f59e0b' }}>{val}</span>
+                            </div>
+                          ))}
+                          <div style={{ marginTop:10, fontSize:11, color:'#78350f' }}>
+                            File at: <span style={{ color:'#f59e0b' }}>gov.uk/file-your-self-assessment-tax-return</span> · Deadline: 31 January
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
               </div>
             </div>
           )
