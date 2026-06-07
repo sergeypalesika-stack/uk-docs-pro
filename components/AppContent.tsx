@@ -638,16 +638,18 @@ export default function AppContent() {
   const fmtGBP = (n) => '£' + Number(n).toFixed(2)
 
   const generateCSV = () => {
+    const NL = String.fromCharCode(10)
+    const QT = String.fromCharCode(34)
+    const mkRow = (arr) => arr.map(v => QT + String(v).replace(new RegExp(QT, 'g'), QT+QT) + QT).join(',')
     const rows = [
-      ['Date', 'Type', 'Category', 'Description', 'Amount (GBP)'],
+      mkRow(['Date', 'Type', 'Category', 'Description', 'Amount (GBP)']),
       ...finance.sort((a,b) => a.date.localeCompare(b.date)).map(e => {
         const cat = EXP_CATS.find(c => c.id === e.category)
-        return [e.date, e.type === 'income' ? 'INCOME' : 'EXPENSE', cat ? cat.label : e.category, e.note || (e.type === 'income' ? 'Delivery income' : e.category), e.amount.toFixed(2)]
+        return mkRow([e.date, e.type === 'income' ? 'INCOME' : 'EXPENSE', cat ? cat.label : e.category, e.note || (e.type === 'income' ? 'Delivery income' : e.category), e.amount.toFixed(2)])
       })
     ]
-    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('
-')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const csv = rows.join(NL)
+    const blob = new Blob([String.fromCharCode(0xFEFF) + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -656,7 +658,7 @@ export default function AppContent() {
     URL.revokeObjectURL(url)
   }
 
-  const generatePDFReport = () => {
+    const generatePDFReport = () => {
     const name = profile?.name || user?.email || 'Self-employed'
     const curYear = new Date().getFullYear().toString()
     const taxYearStart = (parseInt(curYear) - 1) + '/2024'
