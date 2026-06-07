@@ -385,3 +385,20 @@ export async function addDocFile(documentId: string, userId: string, name: strin
 export async function deleteDocFile(id: string) {
   return sb().from('document_files').delete().eq('id', id)
 }
+
+// ── FINANCE ──────────────────────────────────────────
+export interface FinanceEntry {
+  id: string; user_id: string; type: 'income' | 'expense'
+  date: string; amount: number; category: string; note: string; created_at: string
+}
+export async function getFinance(userId: string) {
+  const { data } = await sb().from('finance_entries').select('*').eq('user_id', userId).order('date', { ascending: false })
+  return (data || []) as FinanceEntry[]
+}
+export async function addFinance(userId: string, type: string, date: string, amount: number, category: string, note: string) {
+  const { data } = await sb().from('finance_entries').insert({ user_id: userId, type, date, amount, category, note }).select().single()
+  return data as FinanceEntry | null
+}
+export async function deleteFinance(id: string) {
+  return sb().from('finance_entries').delete().eq('id', id)
+}
