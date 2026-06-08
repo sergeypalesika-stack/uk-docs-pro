@@ -205,43 +205,6 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
             </div>
           </div>
         )}
-                </div>
-              </div>
-
-              {/* Add mileage form */}
-              <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
-                <div style={{ fontSize:11, color:'#8b949e', marginBottom:10, textTransform:'uppercase', letterSpacing:1 }}>+ Log Miles</div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
-                  <input type="date" value={mileForm.date} onChange={e => setMileForm({...mileForm, date:e.target.value})} style={FS} />
-                  <input type="number" placeholder="Miles driven" value={mileForm.miles} onChange={e => setMileForm({...mileForm, miles:e.target.value})} style={FS} />
-                </div>
-                <input placeholder="Route / note (optional)" value={mileForm.note} onChange={e => setMileForm({...mileForm, note:e.target.value})} style={{...FS, marginBottom:8}} />
-                {mileForm.miles && (
-                  <div style={{ fontSize:12, color:'#3fb950', padding:'6px 10px', background:'#0d2b0d', borderRadius:6, marginBottom:8 }}>
-                    ≈ {fmtGBP(parseFloat(mileForm.miles) * (yearMiles < 10000 ? 0.45 : 0.25))} allowance at {yearMiles < 10000 ? '45' : '25'}p/mile
-                  </div>
-                )}
-                <button onClick={addMileage} style={{ background:'#1f3a5f', border:'1px solid #58a6ff', color:'#58a6ff', borderRadius:8, padding:'9px 16px', fontSize:13, cursor:'pointer', fontWeight:600, width:'100%' }}>
-                  + Log Mileage
-                </button>
-              </div>
-
-              {mileEntries.map(e => (
-                <div key={e.id} style={{ display:'flex', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #21262d' }}>
-                  <span style={{ fontSize:18, marginRight:8 }}>🚗</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:13, color:'#e6edf3' }}>{e.note.split('|')[0]} miles {e.note.split('|')[1] ? '· '+e.note.split('|')[1] : ''}</div>
-                    <div style={{ fontSize:11, color:'#8b949e' }}>{e.date}</div>
-                  </div>
-                  <div style={{ fontSize:15, fontWeight:700, color:'#3fb950', marginRight:10 }}>{fmtGBP(e.amount)}</div>
-                  <button onClick={() => deleteFinEntry(e.id)} style={{ background:'none', border:'none', color:'#f85149', cursor:'pointer', fontSize:16, padding:'2px 6px' }}>✕</button>
-                </div>
-              ))}
-            </div>
-          </div>
-          )}
-
-
         {/* DEADLINES */}
         {finTab === 'deadlines' && (
             <div>
