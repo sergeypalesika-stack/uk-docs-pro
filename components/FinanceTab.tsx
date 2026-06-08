@@ -29,7 +29,7 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
   const rptEstTax   = rptTaxable * 0.20
   const rptEstNI    = rptProfit > 12570 ? (rptProfit - 12570) * 0.09 : 0
   return (
-    <div style={{ background: '#0d1117', minHeight: '100%', marginTop: -16, marginLeft: -20, marginRight: -20, padding: '0 0 20px' }}>
+    <div style={{ background: '#0d1117', minHeight: '100%', marginTop: -16, marginLeft: -20, marginRight: -20, padding: '16px 20px 20px' }}>
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,#1a2332,#0d1117)', borderBottom: '1px solid #21262d', padding: '16px 20px 12px' }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: '#58a6ff', marginBottom: 2 }}>💷 UK Driver Finance</div>
@@ -68,7 +68,6 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
         ))}
       </div>
 
-      <div style={{ padding:'16px 20px' }}>
 
         {/* INCOME */}
         {finTab === 'log' && (
@@ -359,7 +358,6 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
             </div>
           )}
 
-      </div>
     </div>
   )
 }
