@@ -770,11 +770,15 @@ export default function AppContent() {
 <script>window.onload = function(){ window.print() }</script>
 </body></html>`
 
-    const w = window.open('', '_blank', 'width=900,height=700')
-    if (w) {
-      w.document.write(html)
-      w.document.close()
-    }
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'self-assessment-' + new Date().getFullYear() + '.html'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
   const finMonthLabel = (ym) => { const [y,m] = ym.split('-'); return new Date(y, m-1).toLocaleDateString('en-GB', { month:'long', year:'numeric' }) }
 
