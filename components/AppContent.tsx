@@ -721,27 +721,27 @@ export default function AppContent() {
 <div class="summary-grid">
   <div class="summary-box">
     <h3>📊 Profit & Loss Summary</h3>
-    <div class="summary-row"><span>Total Income</span><span style="color:#166534;font-weight:600">${fmtGBP(yIncome)}</span></div>
-    <div class="summary-row"><span>Business Expenses</span><span style="color:#991b1b">− ${fmtGBP(yExpenses)}</span></div>
-    <div class="summary-row"><span>Mileage Allowance</span><span style="color:#991b1b">− ${fmtGBP(yMileage)}</span></div>
-    <div class="summary-row total"><span>Net Profit</span><span style="color:#1d4ed8">${fmtGBP(yProfit)}</span></div>
+    <div class="summary-row"><span>Total Income</span><span style="color:#166534;font-weight:600">${fmtGBP(rptIncome)}</span></div>
+    <div class="summary-row"><span>Business Expenses</span><span style="color:#991b1b">− ${fmtGBP(rptExpenses)}</span></div>
+    <div class="summary-row"><span>Mileage Allowance</span><span style="color:#991b1b">− ${fmtGBP(rptMileage)}</span></div>
+    <div class="summary-row total"><span>Net Profit</span><span style="color:#1d4ed8">${fmtGBP(rptProfit)}</span></div>
   </div>
   <div class="summary-box">
     <h3>💷 Estimated Tax (2024/25)</h3>
-    <div class="summary-row"><span>Net Profit</span><span>${fmtGBP(yProfit)}</span></div>
+    <div class="summary-row"><span>Net Profit</span><span>${fmtGBP(rptProfit)}</span></div>
     <div class="summary-row"><span>Personal Allowance</span><span>− ${fmtGBP(Math.min(yProfit, 12570))}</span></div>
-    <div class="summary-row"><span>Taxable Income</span><span>${fmtGBP(taxable)}</span></div>
-    <div class="summary-row"><span>Income Tax (20%)</span><span style="color:#991b1b">${fmtGBP(estTax)}</span></div>
-    <div class="summary-row"><span>Class 4 NI (9%)</span><span style="color:#991b1b">${fmtGBP(estNI)}</span></div>
-    <div class="summary-row total"><span>Total Est. Tax</span><span style="color:#991b1b">${fmtGBP(estTax + estNI)}</span></div>
+    <div class="summary-row"><span>Taxable Income</span><span>${fmtGBP(rptTaxable)}</span></div>
+    <div class="summary-row"><span>Income Tax (20%)</span><span style="color:#991b1b">${fmtGBP(rptEstTax)}</span></div>
+    <div class="summary-row"><span>Class 4 NI (9%)</span><span style="color:#991b1b">${fmtGBP(rptEstNI)}</span></div>
+    <div class="summary-row total"><span>Total Est. Tax</span><span style="color:#991b1b">${fmtGBP(rptEstTax + rptEstNI)}</span></div>
   </div>
 </div>
 
 <div class="sa103">
   <h3>📋 SA103 Self-Employment (Short) — Key Figures</h3>
-  <div class="sa103-row"><span>Box 9 — Turnover (total income)</span><div class="sa103-box">${fmtGBP(yIncome)}</div></div>
+  <div class="sa103-row"><span>Box 9 — Turnover (total income)</span><div class="sa103-box">${fmtGBP(rptIncome)}</div></div>
   <div class="sa103-row"><span>Box 17 — Allowable business expenses</span><div class="sa103-box">${fmtGBP(yExpenses + yMileage)}</div></div>
-  <div class="sa103-row"><span>Box 28 — Net profit</span><div class="sa103-box">${fmtGBP(yProfit)}</div></div>
+  <div class="sa103-row"><span>Box 28 — Net profit</span><div class="sa103-box">${fmtGBP(rptProfit)}</div></div>
   <div class="warning">⚠️ These figures are estimates. Enter them in your online Self Assessment at gov.uk/file-your-self-assessment-tax-return. Deadline: 31 January.</div>
 </div>
 
@@ -754,7 +754,7 @@ export default function AppContent() {
   <div class="section-title">📦 Expenses by Category (${curYear})</div>
   <table><tr><th>Category</th><th>Total</th></tr>
   ${expByCategory.map(c => `<tr><td>${c.icon} ${c.label}</td><td style="font-weight:600;color:#991b1b">${fmtGBP(c.total)}</td></tr>`).join('')}
-  ${yMileage > 0 ? `<tr><td>🚗 Mileage Allowance</td><td style="font-weight:600;color:#991b1b">${fmtGBP(yMileage)}</td></tr>` : ''}
+  ${yMileage > 0 ? `<tr><td>🚗 Mileage Allowance</td><td style="font-weight:600;color:#991b1b">${fmtGBP(rptMileage)}</td></tr>` : ''}
   <tr style="font-weight:700;background:#f9fafb"><td>TOTAL EXPENSES</td><td style="color:#991b1b">${fmtGBP(yExpenses + yMileage)}</td></tr></table>
 </div>
 
@@ -2244,7 +2244,19 @@ export default function AppContent() {
 
           const FS = { background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, color: '#e6edf3', padding: '8px 10px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }
 
-          return (
+          const yearMiles = getTotalYearMiles()
+          const rate1End = Math.min(yearMiles, 10000)
+          const rate2Start = Math.max(0, yearMiles - 10000)
+          const mileEntries = finance.filter(function(e){ return e.category === 'mileage' && e.date.startsWith(finMonth) })
+          const deadlines = getHMRCDeadlines()
+          const rptIncome   = finance.filter(function(e){ return e.type === 'income'  && e.date.startsWith(curYear) }).reduce(function(s,e){ return s + Number(e.amount) }, 0)
+          const rptExpenses = finance.filter(function(e){ return e.type === 'expense' && e.date.startsWith(curYear) && e.category !== 'mileage' }).reduce(function(s,e){ return s + Number(e.amount) }, 0)
+          const rptMileage  = finance.filter(function(e){ return e.category === 'mileage' && e.date.startsWith(curYear) }).reduce(function(s,e){ return s + Number(e.amount) }, 0)
+          const rptProfit   = rptIncome - rptExpenses - rptMileage
+          const rptTaxable  = Math.max(0, rptProfit - 12570)
+          const rptEstTax   = rptTaxable * 0.20
+          const rptEstNI    = rptProfit > 12570 ? (rptProfit - 12570) * 0.09 : 0
+                    return (
             <div style={{ background: '#0d1117', minHeight: '100%', marginTop: -16, marginLeft: -20, marginRight: -20, padding: '0 0 20px' }}>
               {/* Header */}
               <div style={{ background: 'linear-gradient(135deg,#1a2332,#0d1117)', borderBottom: '1px solid #21262d', padding: '16px 20px 12px' }}>
@@ -2365,12 +2377,7 @@ export default function AppContent() {
                 )}
 
                 {/* MILEAGE */}
-                {finTab === 'mileage' && (() => {
-                  const yearMiles = getTotalYearMiles()
-                  const rate1End = Math.min(yearMiles, 10000)
-                  const rate2Start = Math.max(0, yearMiles - 10000)
-                  const mileEntries = finance.filter(e => e.category === 'mileage' && e.date.startsWith(finMonth))
-                  return (
+                {finTab === 'mileage' && (
                     <div>
                       {/* Mileage counter */}
                       <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
@@ -2434,13 +2441,11 @@ export default function AppContent() {
                         </div>
                       ))}
                     </div>
-                  )
-                })()}
+                  )}
+
 
                 {/* DEADLINES */}
-                {finTab === 'deadlines' && (() => {
-                  const deadlines = getHMRCDeadlines()
-                  return (
+                {finTab === 'deadlines' && (
                     <div>
                       <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
                         <div style={{ fontSize:11, color:'#e3b341', marginBottom:14, textTransform:'uppercase', letterSpacing:1 }}>⏰ HMRC Key Dates</div>
@@ -2483,8 +2488,8 @@ export default function AppContent() {
                         ))}
                       </div>
                     </div>
-                  )
-                })()}
+                  )}
+
 
                 {/* SUMMARY / SELF ASSESSMENT */}
                 {finTab === 'summary' && (
@@ -2492,13 +2497,13 @@ export default function AppContent() {
                     <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
                       <div style={{ fontSize:11, color:'#58a6ff', marginBottom:12, textTransform:'uppercase', letterSpacing:1 }}>📊 Year {curYear} — Self Assessment</div>
                       {[
-                        { label:'Total Income',              val:fmtGBP(yIncome),             color:'#3fb950' },
-                        { label:'Deductible Expenses',       val:`− ${fmtGBP(yExpenses)}`,    color:'#f85149' },
-                        { label:'Net Profit',                val:fmtGBP(yProfit),             color:'#58a6ff' },
+                        { label:'Total Income',              val:fmtGBP(rptIncome),             color:'#3fb950' },
+                        { label:'Deductible Expenses',       val:`− ${fmtGBP(rptExpenses)}`,    color:'#f85149' },
+                        { label:'Net Profit',                val:fmtGBP(rptProfit),             color:'#58a6ff' },
                         { label:'Personal Allowance',        val:fmtGBP(Math.min(yProfit,TAX_ALLOWANCE)), color:'#8b949e' },
-                        { label:'Taxable Income',            val:fmtGBP(taxable),             color:'#e3b341' },
-                        { label:'≈ Income Tax (20%)',        val:fmtGBP(estTax),              color:'#f85149' },
-                        { label:'≈ Class 4 NI (9%)',         val:fmtGBP(estNI),               color:'#f85149' },
+                        { label:'Taxable Income',            val:fmtGBP(rptTaxable),             color:'#e3b341' },
+                        { label:'≈ Income Tax (20%)',        val:fmtGBP(rptEstTax),              color:'#f85149' },
+                        { label:'≈ Class 4 NI (9%)',         val:fmtGBP(rptEstNI),               color:'#f85149' },
                         { label:'≈ Total Tax Due',           val:fmtGBP(estTax+estNI),        color:'#f85149', bold:true },
                       ].map(item => (
                         <div key={item.label} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #21262d' }}>
@@ -2533,27 +2538,19 @@ export default function AppContent() {
               </div>
 
                 {/* EXPORT REPORT TAB */}
-                {finTab === 'report' && (() => {
-                  const curYear = new Date().getFullYear().toString()
-                  const yIncome   = finance.filter(e => e.type === 'income'  && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
-                  const yExpenses = finance.filter(e => e.type === 'expense' && e.date.startsWith(curYear) && e.category !== 'mileage').reduce((s,e) => s + Number(e.amount), 0)
-                  const yMileage  = finance.filter(e => e.category === 'mileage' && e.date.startsWith(curYear)).reduce((s,e) => s + Number(e.amount), 0)
-                  const yProfit   = yIncome - yExpenses - yMileage
-                  const estTax    = Math.max(0, yProfit - 12570) * 0.20
-                  const estNI     = yProfit > 12570 ? (yProfit - 12570) * 0.09 : 0
-                  return (
+                {finTab === 'report' && (
                     <div>
                       {/* Summary preview */}
                       <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
                         <div style={{ fontSize:11, color:'#58a6ff', marginBottom:12, textTransform:'uppercase', letterSpacing:1 }}>📊 Tax Year {curYear} Summary</div>
                         {[
-                          ['Total Income',         fmtGBP(yIncome),             '#3fb950'],
-                          ['Business Expenses',    '− ' + fmtGBP(yExpenses),    '#f85149'],
-                          ['Mileage Allowance',    '− ' + fmtGBP(yMileage),     '#f85149'],
-                          ['Net Profit (Box 28)',  fmtGBP(yProfit),             '#58a6ff'],
-                          ['≈ Income Tax',         fmtGBP(estTax),              '#f85149'],
-                          ['≈ NI',                 fmtGBP(estNI),               '#f85149'],
-                          ['≈ Total Tax',          fmtGBP(estTax + estNI),      '#f85149'],
+                          ['Total Income',         fmtGBP(rptIncome),             '#3fb950'],
+                          ['Business Expenses',    '− ' + fmtGBP(rptExpenses),    '#f85149'],
+                          ['Mileage Allowance',    '− ' + fmtGBP(rptMileage),     '#f85149'],
+                          ['Net Profit (Box 28)',  fmtGBP(rptProfit),             '#58a6ff'],
+                          ['≈ Income Tax',         fmtGBP(rptEstTax),              '#f85149'],
+                          ['≈ NI',                 fmtGBP(rptEstNI),               '#f85149'],
+                          ['≈ Total Tax',          fmtGBP(rptEstTax + rptEstNI),      '#f85149'],
                         ].map(([l,v,c]) => (
                           <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #21262d' }}>
                             <span style={{ fontSize:12, color:'#8b949e' }}>{l}</span>
@@ -2583,9 +2580,9 @@ export default function AppContent() {
                         <div style={{ background:'#1c1917', border:'1px solid #78350f', borderRadius:12, padding:'14px 16px' }}>
                           <div style={{ fontSize:12, color:'#f59e0b', fontWeight:700, marginBottom:8 }}>📋 SA103 Short Form — Box Reference</div>
                           {[
-                            ['Box 9',  'Turnover',                         fmtGBP(yIncome)],
+                            ['Box 9',  'Turnover',                         fmtGBP(rptIncome)],
                             ['Box 17', 'Total allowable expenses',         fmtGBP(yExpenses + yMileage)],
-                            ['Box 28', 'Net profit',                       fmtGBP(yProfit)],
+                            ['Box 28', 'Net profit',                       fmtGBP(rptProfit)],
                           ].map(([box,label,val]) => (
                             <div key={box} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom:'1px solid #292524' }}>
                               <span style={{ background:'#003078', color:'#fff', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:4, flexShrink:0 }}>{box}</span>
@@ -2599,8 +2596,8 @@ export default function AppContent() {
                         </div>
                       </div>
                     </div>
-                  )
-                })()}
+                  )}
+
               </div>
             </div>
           )
