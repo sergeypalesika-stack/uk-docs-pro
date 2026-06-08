@@ -300,7 +300,6 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
 
         {/* EXPORT REPORT TAB */}
         {finTab === 'report' && (
-            <>
             <div>
               {/* Summary preview */}
               <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
@@ -358,7 +357,6 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
                 </div>
               </div>
             </div>
-            </>
           )}
 
       </div>
