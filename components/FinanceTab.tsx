@@ -213,6 +213,7 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
                 </div>
               ))}
             </div>
+          </div>
           )}
 
 
