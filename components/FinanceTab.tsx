@@ -150,36 +150,61 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
 
         {/* MILEAGE */}
         {finTab === 'mileage' && (
-            <div>
-              {/* Mileage counter */}
-              <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
-                <div style={{ fontSize:11, color:'#58a6ff', marginBottom:12, textTransform:'uppercase', letterSpacing:1 }}>🚗 {new Date().getFullYear()} Mileage Allowance</div>
-
-                {/* Progress bar to 10,000 miles */}
-                <div style={{ marginBottom:12 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#8b949e', marginBottom:6 }}>
-                    <span>45p/mile rate</span>
-                    <span style={{ color: yearMiles >= 10000 ? '#f85149' : '#3fb950' }}>{yearMiles.toFixed(0)} / 10,000 miles</span>
-                  </div>
-                  <div style={{ background:'#21262d', borderRadius:99, height:8, overflow:'hidden' }}>
-                    <div style={{ background: yearMiles >= 10000 ? '#f85149' : '#3fb950', width:`${Math.min(100, yearMiles/100)}%`, height:'100%', borderRadius:99 }} />
-                  </div>
-                  {yearMiles >= 10000 && <div style={{ fontSize:11, color:'#f85149', marginTop:4 }}>Exceeded 10,000 miles → 25p/mile now applies</div>}
+          <div>
+            <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
+              <div style={{ fontSize:11, color:'#58a6ff', marginBottom:12, textTransform:'uppercase', letterSpacing:1 }}>🚗 {new Date().getFullYear()} Mileage Allowance</div>
+              <div style={{ marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#8b949e', marginBottom:6 }}>
+                  <span>45p/mile rate</span>
+                  <span style={{ color: yearMiles >= 10000 ? '#f85149' : '#3fb950' }}>{yearMiles.toFixed(0)} / 10,000 miles</span>
                 </div>
-
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  <div style={{ background:'#0d1117', borderRadius:8, padding:'10px 12px', textAlign:'center' }}>
-                    <div style={{ fontSize:11, color:'#8b949e' }}>45p/mile</div>
-                    <div style={{ fontSize:15, fontWeight:700, color:'#3fb950' }}>{fmtGBP(Math.min(yearMiles,10000)*0.45)}</div>
-                    <div style={{ fontSize:10, color:'#8b949e' }}>{Math.min(yearMiles,10000).toFixed(0)} miles</div>
+                <div style={{ background:'#21262d', borderRadius:99, height:8, overflow:'hidden' }}>
+                  <div style={{ background: yearMiles >= 10000 ? '#f85149' : '#3fb950', width: Math.min(100, yearMiles/100) + '%', height:'100%', borderRadius:99 }} />
+                </div>
+                {yearMiles >= 10000 && <div style={{ fontSize:11, color:'#f85149', marginTop:4 }}>Exceeded 10,000 miles — 25p/mile now applies</div>}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <div style={{ background:'#0d1117', borderRadius:8, padding:'10px 12px', textAlign:'center' }}>
+                  <div style={{ fontSize:11, color:'#8b949e' }}>45p/mile</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#3fb950' }}>{fmtGBP(Math.min(yearMiles,10000)*0.45)}</div>
+                  <div style={{ fontSize:10, color:'#8b949e' }}>{Math.min(yearMiles,10000).toFixed(0)} miles</div>
+                </div>
+                {yearMiles > 10000 && <div style={{ background:'#0d1117', borderRadius:8, padding:'10px 12px', textAlign:'center' }}>
+                  <div style={{ fontSize:11, color:'#8b949e' }}>25p/mile</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#e3b341' }}>{fmtGBP((yearMiles-10000)*0.25)}</div>
+                  <div style={{ fontSize:10, color:'#8b949e' }}>{(yearMiles-10000).toFixed(0)} miles</div>
+                </div>}
+              </div>
+            </div>
+            <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
+              <div style={{ fontSize:11, color:'#8b949e', marginBottom:10, textTransform:'uppercase', letterSpacing:1 }}>+ Log Miles</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                <input type="date" value={mileForm.date} onChange={e => setMileForm({...mileForm, date:e.target.value})} style={FS} />
+                <input type="number" placeholder="Miles driven" value={mileForm.miles} onChange={e => setMileForm({...mileForm, miles:e.target.value})} style={FS} />
+              </div>
+              <input placeholder="Route / note (optional)" value={mileForm.note} onChange={e => setMileForm({...mileForm, note:e.target.value})} style={{...FS, marginBottom:8}} />
+              {mileForm.miles && <div style={{ fontSize:12, color:'#3fb950', padding:'6px 10px', background:'#0d2b0d', borderRadius:6, marginBottom:8 }}>
+                approx {fmtGBP(parseFloat(mileForm.miles) * (yearMiles < 10000 ? 0.45 : 0.25))} at {yearMiles < 10000 ? '45' : '25'}p/mile
+              </div>}
+              <button onClick={addMileage} style={{ background:'#1f3a5f', border:'1px solid #58a6ff', color:'#58a6ff', borderRadius:8, padding:'9px 16px', fontSize:13, cursor:'pointer', fontWeight:600, width:'100%' }}>
+                + Log Mileage
+              </button>
+            </div>
+            <div>
+              {mileEntries.map(function(e) { return (
+                <div key={e.id} style={{ display:'flex', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #21262d' }}>
+                  <span style={{ fontSize:18, marginRight:8 }}>🚗</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, color:'#e6edf3' }}>{e.note.split('|')[0]} miles {e.note.split('|')[1] ? '· ' + e.note.split('|')[1] : ''}</div>
+                    <div style={{ fontSize:11, color:'#8b949e' }}>{e.date}</div>
                   </div>
-                  {yearMiles > 10000 && (
-                    <div style={{ background:'#0d1117', borderRadius:8, padding:'10px 12px', textAlign:'center' }}>
-                      <div style={{ fontSize:11, color:'#8b949e' }}>25p/mile</div>
-                      <div style={{ fontSize:15, fontWeight:700, color:'#e3b341' }}>{fmtGBP((yearMiles-10000)*0.25)}</div>
-                      <div style={{ fontSize:10, color:'#8b949e' }}>{(yearMiles-10000).toFixed(0)} miles</div>
-                    </div>
-                  )}
+                  <div style={{ fontSize:15, fontWeight:700, color:'#3fb950', marginRight:10 }}>{fmtGBP(e.amount)}</div>
+                  <button onClick={() => deleteFinEntry(e.id)} style={{ background:'none', border:'none', color:'#f85149', cursor:'pointer', fontSize:16, padding:'2px 6px' }}>x</button>
+                </div>
+              )})}
+            </div>
+          </div>
+        )}
                 </div>
               </div>
 
