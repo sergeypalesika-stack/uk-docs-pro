@@ -2539,6 +2539,7 @@ export default function AppContent() {
 
                 {/* EXPORT REPORT TAB */}
                 {finTab === 'report' && (
+                    <>
                     <div>
                       {/* Summary preview */}
                       <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
@@ -2581,7 +2582,7 @@ export default function AppContent() {
                           <div style={{ fontSize:12, color:'#f59e0b', fontWeight:700, marginBottom:8 }}>📋 SA103 Short Form — Box Reference</div>
                           {[
                             ['Box 9',  'Turnover',                         fmtGBP(rptIncome)],
-                            ['Box 17', 'Total allowable expenses',         fmtGBP(yExpenses + yMileage)],
+                            ['Box 17', 'Total allowable expenses',         fmtGBP(rptExpenses + rptMileage)],
                             ['Box 28', 'Net profit',                       fmtGBP(rptProfit)],
                           ].map(([box,label,val]) => (
                             <div key={box} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom:'1px solid #292524' }}>
@@ -2596,6 +2597,7 @@ export default function AppContent() {
                         </div>
                       </div>
                     </div>
+                    </>
                   )}
 
               </div>
