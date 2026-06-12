@@ -37,13 +37,15 @@ export default function NotificationManager({ docs, passports, lang, dark }) {
     allItems.forEach(function(item) {
       const days = Math.ceil((new Date(item.date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       if (days === 30 || days === 14 || days === 7 || days === 1) {
-        try {
-          new Notification('⚠️ UK Docs: ' + t('Document expiring', 'Документ закінчується'), {
-            body: item.title + (item.member ? ' (' + item.member + ')' : '') + ' — ' + days + ' ' + t('days left', 'днів'),
-            icon: '/icon-192.png',
-            tag: 'expiry-' + item.title,
-          })
-        } catch (err) {}
+        const title = '⚠️ UK Docs: ' + t('Document expiring', 'Документ закінчується')
+        const body = item.title + (item.member ? ' (' + item.member + ')' : '') + ' — ' + days + ' ' + t('days left', 'днів')
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, { body: body, icon: '/icon-192.png', vibrate: [200, 100, 200], tag: 'expiry-' + item.title })
+          }).catch(function(){})
+        } else {
+          try { new Notification(title, { body: body, icon: '/icon-192.png', tag: 'expiry-' + item.title }) } catch (err) {}
+        }
       }
     })
   }
@@ -58,18 +60,50 @@ export default function NotificationManager({ docs, passports, lang, dark }) {
     if (result === 'granted') {
       setEnabled(true)
       localStorage.setItem('uk-docs-notifications', 'on')
-      try {
-        new Notification('✅ UK Docs', {
-          body: t('Notifications enabled! Alerts at 30, 14, 7 and 1 days before expiry.', 'Сповіщення увімкнено! Попередження за 30, 14, 7 та 1 день.'),
-          icon: '/icon-192.png',
+      const wTitle = '✅ UK Docs'
+      const wBody = t('Notifications enabled! Alerts at 30, 14, 7 and 1 days.', 'Сповіщення увімкнено! За 30, 14, 7 та 1 день.')
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(function(reg) {
+          reg.showNotification(wTitle, { body: wBody, icon: '/icon-192.png', vibrate: [200, 100, 200] })
+        }).catch(function() {
+          try { new Notification(wTitle, { body: wBody }) } catch (err) {}
         })
-      } catch (err) {}
+      } else {
+        try { new Notification(wTitle, { body: wBody }) } catch (err) {}
+      }
     }
   }
 
   const toggleOff = () => {
     setEnabled(false)
     localStorage.setItem('uk-docs-notifications', 'off')
+  }
+
+  const sendTest = async () => {
+    if (Notification.permission !== 'granted') {
+      alert(t('Permission not granted. Check browser settings.', 'Дозвіл не надано. Перевір налаштування браузера.'))
+      return
+    }
+    try {
+      // Try service worker notification first (works on Android Chrome)
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready
+        await reg.showNotification('🔔 UK Docs Test', {
+          body: t('Notifications are working! You will get alerts about expiring documents.', 'Сповіщення працюють! Ти отримаєш попередження про документи.'),
+          icon: '/icon-192.png',
+          vibrate: [200, 100, 200],
+          tag: 'uk-docs-test',
+        })
+        return
+      }
+      // Fallback to direct notification
+      new Notification('🔔 UK Docs Test', {
+        body: t('Notifications are working!', 'Сповіщення працюють!'),
+        icon: '/icon-192.png',
+      })
+    } catch (err) {
+      alert(t('Error: ', 'Помилка: ') + String(err))
+    }
   }
 
   return (
@@ -87,7 +121,10 @@ export default function NotificationManager({ docs, passports, lang, dark }) {
           </div>
         </div>
         {enabled && permission === 'granted' ? (
-          <button onClick={toggleOff} style={{ background: '#16a34a', border: 'none', borderRadius: 20, padding: '8px 16px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>ON</button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={sendTest} style={{ background: dark ? '#334155' : '#eff6ff', border: '1px solid #93c5fd', borderRadius: 20, padding: '8px 14px', color: '#1d4ed8', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Test</button>
+            <button onClick={toggleOff} style={{ background: '#16a34a', border: 'none', borderRadius: 20, padding: '8px 16px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>ON</button>
+          </div>
         ) : (
           <button onClick={requestPermission} style={{ background: dark ? '#334155' : '#e2e8f4', border: 'none', borderRadius: 20, padding: '8px 16px', color: dark ? '#94a3b8' : '#7a8aaa', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>OFF</button>
         )}
