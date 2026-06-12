@@ -188,47 +188,90 @@ export default function AppContent() {
   const searchResults = getSearchResults()
   const cat = (id) => CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1]
 
+  // ── CACHE HELPERS (instant load + offline)
+  const CACHE_KEY = 'uk-docs-cache-v1'
+  const saveCache = (data) => {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)) } catch (err) {}
+  }
+  const loadCache = () => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch (err) { return null }
+  }
+
   // ── LOAD
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUser(user)
-      const [prof, docs, passes, addrs, res, med, ctcts, fin] = await Promise.all([
-        DB.getProfile(user.id),
-        DB.getDocsWithPhotos(user.id),
-        DB.getPassports(user.id),
-        DB.getAddresses(user.id),
-        DB.getResumesWithFiles(user.id),
-        DB.getMedical(user.id),
-        DB.getContacts(user.id),
-        DB.getFinance(user.id),
-      ])
-      setProfile(prof)
-      setProfForm(prof || {})
-      setDocs(docs)
-      setPassports(passes)
-      setTodos(todos)
-      setAddresses(addrs)
-      setResumes(res)
-      setMedical(med)
-      setContacts(ctcts)
-      setFinance(fin)
-      // Load jobs for calendar
-      try {
-        const { data: jobsData } = await supabase.from('job_applications').select('*').eq('user_id', user.id)
-        setJobsList(jobsData || [])
-      } catch (err) {}
-      await DB.seedDefaultDocs(user.id)
-      const freshDocs = await DB.getDocsWithPhotos(user.id)
-      setDocs(freshDocs)
+      // 1. INSTANT: show cached data immediately (no loading screen if cache exists)
+      const cached = loadCache()
+      if (cached) {
+        if (cached.profile) { setProfile(cached.profile); setProfForm(cached.profile) }
+        if (cached.docs) setDocs(cached.docs)
+        if (cached.passports) setPassports(cached.passports)
+        if (cached.addresses) setAddresses(cached.addresses)
+        if (cached.resumes) setResumes(cached.resumes)
+        if (cached.medical) setMedical(cached.medical)
+        if (cached.contacts) setContacts(cached.contacts)
+        if (cached.finance) setFinance(cached.finance)
+        if (cached.jobs) setJobsList(cached.jobs)
+        setLoading(false)
+      }
+
+      // Restore settings instantly
       const saved = localStorage.getItem('uk_lang')
       if (saved) setLang(saved)
       const th = localStorage.getItem('uk_theme')
       if (th) setTheme(th)
       const pin = localStorage.getItem('uk_pin')
       if (pin) setPinLocked(true)
-      setLoading(false)
+
+      // 2. BACKGROUND: fetch fresh data from server
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { if (!cached) setLoading(false); return }
+        setUser(user)
+        const [prof, docs, passes, addrs, res, med, ctcts, fin] = await Promise.all([
+          DB.getProfile(user.id),
+          DB.getDocsWithPhotos(user.id),
+          DB.getPassports(user.id),
+          DB.getAddresses(user.id),
+          DB.getResumesWithFiles(user.id),
+          DB.getMedical(user.id),
+          DB.getContacts(user.id),
+          DB.getFinance(user.id),
+        ])
+        setProfile(prof)
+        setProfForm(prof || {})
+        setDocs(docs)
+        setPassports(passes)
+        setAddresses(addrs)
+        setResumes(res)
+        setMedical(med)
+        setContacts(ctcts)
+        setFinance(fin)
+        let jobsData = []
+        try {
+          const jobsRes = await supabase.from('job_applications').select('*').eq('user_id', user.id)
+          jobsData = jobsRes.data || []
+          setJobsList(jobsData)
+        } catch (err) {}
+        await DB.seedDefaultDocs(user.id)
+        const freshDocs = await DB.getDocsWithPhotos(user.id)
+        setDocs(freshDocs)
+        setLoading(false)
+
+        // 3. SAVE fresh data to cache for next launch
+        saveCache({
+          profile: prof, docs: freshDocs, passports: passes,
+          addresses: addrs, resumes: res, medical: med,
+          contacts: ctcts, finance: fin, jobs: jobsData,
+          savedAt: Date.now()
+        })
+      } catch (err) {
+        // Offline — cached data already shown, just stop loading
+        setLoading(false)
+      }
     }
     load()
   }, [])
