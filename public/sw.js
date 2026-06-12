@@ -1,12 +1,44 @@
-// UK Docs Service Worker - Notifications + Offline
-const CACHE_NAME = 'uk-docs-v1'
+// UK Docs Service Worker v2 - Full offline + Notifications
+const CACHE_NAME = 'uk-docs-v2'
+const OFFLINE_URLS = ['/']
 
 self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_URLS))
+  )
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(clients.claim())
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    ).then(() => clients.claim())
+  )
+})
+
+// Network-first for API, stale-while-revalidate for app shell
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url)
+  if (e.request.method !== 'GET') return
+
+  // Supabase API calls - network only (data cached in localStorage by app)
+  if (url.hostname.includes('supabase')) return
+
+  e.respondWith(
+    caches.match(e.request).then((cached) => {
+      const fetchPromise = fetch(e.request)
+        .then((res) => {
+          if (res && res.status === 200 && url.protocol.startsWith('http')) {
+            const resClone = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone))
+          }
+          return res
+        })
+        .catch(() => cached)
+      return cached || fetchPromise
+    })
+  )
 })
 
 // Push notifications
@@ -35,23 +67,5 @@ self.addEventListener('notificationclick', (e) => {
       }
       return clients.openWindow(e.notification.data.url || '/')
     })
-  )
-})
-
-// Basic offline support
-self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return
-  e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const resClone = res.clone()
-        caches.open(CACHE_NAME).then((cache) => {
-          if (e.request.url.startsWith('http')) {
-            cache.put(e.request, resClone)
-          }
-        })
-        return res
-      })
-      .catch(() => caches.match(e.request))
   )
 })
