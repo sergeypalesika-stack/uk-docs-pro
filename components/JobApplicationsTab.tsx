@@ -125,6 +125,11 @@ export default function JobApplicationsTab({ userId, dark, lang }) {
                   </span>
                 </div>
                 <div style={{ fontSize: 13, color: dark ? '#93c5fd' : C.blue, fontWeight: 600 }}>🏢 {j.company}</div>
+                {j.status === 'applied' && j.date_applied && Math.ceil((Date.now() - new Date(j.date_applied).getTime()) / 86400000) >= 7 && (
+                  <div style={{ display: 'inline-block', background: '#fff7ed', color: '#b45309', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, marginTop: 4 }}>
+                    ⏰ {Math.ceil((Date.now() - new Date(j.date_applied).getTime()) / 86400000)} {lang !== 'en' ? 'днів — час нагадати про себе!' : 'days — time to follow up!'}
+                  </div>
+                )}
                 {j.location && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>📍 {j.location}</div>}
                 {j.salary && <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>💰 {j.salary}</div>}
                 {j.date_applied && <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{t('Applied','Подано')}: {j.date_applied}</div>}
@@ -169,6 +174,16 @@ export default function JobApplicationsTab({ userId, dark, lang }) {
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#eff6ff', borderRadius: 10, marginBottom: 10, color: C.blue, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
               🔗 {t('View Job Posting', 'Переглянути вакансію')}
             </a>
+          )}
+
+          {selJob.status === 'applied' && (
+            <button onClick={() => {
+              const followUpText = 'Dear Hiring Team,\n\nI hope this message finds you well. I recently applied for the ' + selJob.title + ' position at ' + selJob.company + ' and wanted to follow up on my application.\n\nI remain very interested in this opportunity and would welcome the chance to discuss how my experience could contribute to your team.\n\nThank you for your time and consideration.\n\nBest regards,\nSergii Palesika'
+              navigator.clipboard.writeText(followUpText)
+              alert(t('Follow-up email copied to clipboard! Paste it into your email.', 'Лист скопійовано! Встав його у пошту.'))
+            }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, marginBottom: 10, color: '#b45309', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+              ✉️ {t('Copy Follow-up Email Template', 'Скопіювати шаблон follow-up листа')}
+            </button>
           )}
 
           {selJob.notes && (

@@ -8,6 +8,8 @@ import * as DB from '@/lib/db'
 import type { Address, DocPhoto, Resume, ResumeFile, JobApplication, JobApplicationFile } from '@/lib/db'
 import JobApplicationsTab from '@/components/JobApplicationsTab'
 import FinanceTab from '@/components/FinanceTab'
+import NotificationManager from '@/components/NotificationManager'
+import CalendarTab from '@/components/CalendarTab'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -21,7 +23,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru' | 'uk'
 type Theme   = 'light' | 'dark'
-type MainTab = 'home' | 'docs' | 'passport' | 'address' | 'resume' | 'jobs' | 'finance' | 'medical' | 'profile'
+type MainTab = 'home' | 'docs' | 'passport' | 'address' | 'resume' | 'jobs' | 'finance' | 'calendar' | 'medical' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
@@ -106,6 +108,7 @@ export default function AppContent() {
   const docFileRef     = useRef(null)
   const [docFileUploading, setDocFileUploading] = useState(false)
   const [finance, setFinance] = useState([])
+  const [jobsList, setJobsList] = useState([])
   const [finTab, setFinTab] = useState('log')
   const [finMonth, setFinMonth] = useState(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') })
   const [incForm, setIncForm] = useState({ date: new Date().toISOString().slice(0,10), amount: '', note: '' })
@@ -211,6 +214,11 @@ export default function AppContent() {
       setMedical(med)
       setContacts(ctcts)
       setFinance(fin)
+      // Load jobs for calendar
+      try {
+        const { data: jobsData } = await supabase.from('job_applications').select('*').eq('user_id', user.id)
+        setJobsList(jobsData || [])
+      } catch (err) {}
       await DB.seedDefaultDocs(user.id)
       const freshDocs = await DB.getDocsWithPhotos(user.id)
       setDocs(freshDocs)
@@ -1265,6 +1273,19 @@ export default function AppContent() {
               </div>
             )}
 
+            {/* Notifications */}
+            <NotificationManager docs={docs} passports={passports} lang={lang} dark={dark} />
+
+            {/* Calendar button */}
+            <button onClick={() => switchTab('calendar')} style={{ width: '100%', background: dark ? '#1e293b' : '#fff', color: dark ? '#f1f5f9' : '#0f1f3d', border: 'none', borderRadius: 14, padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <span style={{ fontSize: 26 }}>📅</span>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{t('Events Calendar', 'Календар подій', 'Календар подій')}</div>
+                <div style={{ fontSize: 11, color: '#7a8aaa', marginTop: 1 }}>{t('Deadlines · Expirations · HMRC', 'Дедлайни · Документи · HMRC', 'Дедлайни · Документи · HMRC')}</div>
+              </div>
+              <span style={{ fontSize: 18, color: '#7a8aaa' }}>›</span>
+            </button>
+
             {/* UK Guide button */}
             <button onClick={() => { setShowGuide(true); setGuideSection('checklist') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
               <span style={{ fontSize: 32 }}>📖</span>
@@ -2244,6 +2265,11 @@ export default function AppContent() {
             getHMRCDeadlines={getHMRCDeadlines} TAX_ALLOWANCE={TAX_ALLOWANCE}
             t={t} dark={dark} profile={profile}
           />
+        )}
+
+        {/* ══════════════ CALENDAR TAB ══════════════ */}
+        {tab === 'calendar' && (
+          <CalendarTab docs={docs} passports={passports} jobs={jobsList} getHMRCDeadlines={getHMRCDeadlines} lang={lang} dark={dark} />
         )}
 
         {/* ══════════════ MEDICAL / HEALTH TAB ══════════════ */}

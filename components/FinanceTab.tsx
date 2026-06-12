@@ -228,8 +228,42 @@ export default function FinanceTab({ finance, finTab, setFinTab, finMonth, setFi
   }
 
   function renderSummary() {
+    const last6Months = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      const ym = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+      const inc = finance.filter(function(e){ return e.type === 'income' && e.date.startsWith(ym) }).reduce(function(s,e){ return s + Number(e.amount) }, 0)
+      const exp = finance.filter(function(e){ return e.type === 'expense' && e.date.startsWith(ym) }).reduce(function(s,e){ return s + Number(e.amount) }, 0)
+      last6Months.push({ ym: ym, label: d.toLocaleDateString('en-GB', { month: 'short' }), income: inc, expense: exp })
+    }
+    const maxVal = Math.max(...last6Months.map(function(m){ return Math.max(m.income, m.expense) }), 1)
+
     return (
       <div>
+        <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
+          <div style={{ fontSize:11, color:'#58a6ff', marginBottom:14, textTransform:'uppercase', letterSpacing:1 }}>📈 Last 6 Months</div>
+          <div style={{ display:'flex', alignItems:'flex-end', gap:8, height:120, marginBottom:8 }}>
+            {last6Months.map(function(m) { return (
+              <div key={m.ym} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2, height:'100%', justifyContent:'flex-end' }}>
+                <div style={{ display:'flex', gap:2, alignItems:'flex-end', height:'100%', width:'100%', justifyContent:'center' }}>
+                  <div style={{ width:'40%', background:'#3fb950', borderRadius:'3px 3px 0 0', height: Math.max(2, (m.income/maxVal)*100) + '%' }} />
+                  <div style={{ width:'40%', background:'#f85149', borderRadius:'3px 3px 0 0', height: Math.max(2, (m.expense/maxVal)*100) + '%' }} />
+                </div>
+              </div>
+            )})}
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            {last6Months.map(function(m) { return (
+              <div key={m.ym} style={{ flex:1, textAlign:'center', fontSize:10, color:'#8b949e' }}>{m.label}</div>
+            )})}
+          </div>
+          <div style={{ display:'flex', justifyContent:'center', gap:16, marginTop:10, fontSize:11 }}>
+            <span style={{ color:'#3fb950' }}>● Income</span>
+            <span style={{ color:'#f85149' }}>● Expenses</span>
+          </div>
+        </div>
+
         <div style={{ background:'#161b22', border:'1px solid #21262d', borderRadius:12, padding:16, marginBottom:16 }}>
           <div style={{ fontSize:11, color:'#58a6ff', marginBottom:12, textTransform:'uppercase', letterSpacing:1 }}>📊 Year {curYear} — Self Assessment</div>
           {[['Total Income', fmtGBP(rptIncome), '#3fb950'],['Deductible Expenses', '- ' + fmtGBP(rptExpenses), '#f85149'],['Mileage Allowance', '- ' + fmtGBP(rptMileage), '#f85149'],['Net Profit', fmtGBP(rptProfit), '#58a6ff'],['Personal Allowance', fmtGBP(Math.min(rptProfit, TAX_ALLOWANCE)), '#8b949e'],['Taxable Income', fmtGBP(rptTaxable), '#e3b341'],['Income Tax (20%)', fmtGBP(rptEstTax), '#f85149'],['Class 4 NI (9%)', fmtGBP(rptEstNI), '#f85149'],['Total Tax Due', fmtGBP(rptEstTax + rptEstNI), '#f85149']].map(function(row) { return (
