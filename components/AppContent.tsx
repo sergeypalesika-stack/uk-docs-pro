@@ -10,6 +10,7 @@ import JobApplicationsTab from '@/components/JobApplicationsTab'
 import FinanceTab from '@/components/FinanceTab'
 import NotificationManager from '@/components/NotificationManager'
 import CalendarTab from '@/components/CalendarTab'
+import FamilyTab from '@/components/FamilyTab'
 import { CATEGORIES, DEFAULT_TODOS, NATIONALITIES, AVATARS } from '@/lib/data'
 import { daysUntil, formatDate, generateId, getExpiryStatus } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
@@ -23,7 +24,7 @@ interface TodoItem { id: string; text: string; textRu: string; done: boolean; we
 
 type Lang    = 'en' | 'ru' | 'uk'
 type Theme   = 'light' | 'dark'
-type MainTab = 'home' | 'docs' | 'passport' | 'address' | 'resume' | 'jobs' | 'finance' | 'calendar' | 'medical' | 'profile'
+type MainTab = 'home' | 'docs' | 'passport' | 'address' | 'resume' | 'jobs' | 'finance' | 'calendar' | 'family' | 'medical' | 'profile'
 type View    = 'list' | 'detail' | 'add' | 'edit' | 'addPassport' | 'passportDetail' | 'editProfile' | 'editAddress' | 'export' | 'addResume' | 'editResume' | 'resumeDetail'
 
 // ── COLORS
@@ -1421,6 +1422,16 @@ export default function AppContent() {
               <span style={{ fontSize: 18, color: '#7a8aaa' }}>›</span>
             </button>
 
+            {/* Family button */}
+            <button onClick={() => switchTab('family')} style={{ width: '100%', background: dark ? '#1e293b' : '#fff', color: dark ? '#f1f5f9' : '#0f1f3d', border: 'none', borderRadius: 14, padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <span style={{ fontSize: 26 }}>👨‍👩‍👧</span>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{t('Family Arrival', 'Приїзд сімʼї', 'Приїзд сімʼї')}</div>
+                <div style={{ fontSize: 11, color: '#7a8aaa', marginTop: 1 }}>{t('Checklist · School · Term dates', 'Чекліст · Школа · Канікули', 'Чекліст · Школа · Канікули')}</div>
+              </div>
+              <span style={{ fontSize: 18, color: '#7a8aaa' }}>›</span>
+            </button>
+
             {/* UK Guide button */}
             <button onClick={() => { setShowGuide(true); setGuideSection('checklist') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1e3a5f, #1e40af)', color: '#fff', border: 'none', borderRadius: 14, padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
               <span style={{ fontSize: 32 }}>📖</span>
@@ -2407,6 +2418,11 @@ export default function AppContent() {
           <CalendarTab docs={docs} passports={passports} jobs={jobsList} getHMRCDeadlines={getHMRCDeadlines} lang={lang} dark={dark} />
         )}
 
+        {/* ══════════════ FAMILY TAB ══════════════ */}
+        {tab === 'family' && (
+          <FamilyTab lang={lang} dark={dark} />
+        )}
+
         {/* ══════════════ MEDICAL / HEALTH TAB ══════════════ */}
         {tab === 'medical' && (
           <>
@@ -2969,3 +2985,4 @@ function DocCard({ doc, cat, lang, onOpen, dark }) {
     </div>
   )
 }
+
