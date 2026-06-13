@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 
 // Main app component - separated from page.tsx to fix SWC compilation
 
@@ -134,7 +135,28 @@ export default function AppContent() {
   const toggleTheme = () => {
     const nt = theme === 'light' ? 'dark' : 'light'
     setTheme(nt); localStorage.setItem('uk_theme', nt)
+    // User manually toggled - clear auto schedule flag
+    localStorage.setItem('uk_theme_manual', 'true')
   }
+
+  // Auto dark mode by time (21:00 - 07:00) — runs every minute
+  useEffect(() => {
+    const autoTheme = () => {
+      const manual = localStorage.getItem('uk_theme_manual')
+      if (manual === 'true') return // user set manually — respect it
+      const h = new Date().getHours()
+      const shouldBeDark = h >= 21 || h < 7
+      setTheme(t => {
+        const isDark = t === 'dark'
+        if (shouldBeDark && !isDark) { localStorage.setItem('uk_theme', 'dark'); return 'dark' }
+        if (!shouldBeDark && isDark) { localStorage.setItem('uk_theme', 'light'); return 'light' }
+        return t
+      })
+    }
+    autoTheme()
+    const interval = setInterval(autoTheme, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   // PIN functions
   const PIN_KEY = 'uk_pin'
@@ -2596,6 +2618,27 @@ export default function AppContent() {
               )
             })()}
 
+            <div style={{ background: C.surface, borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>🌙 {t('Auto Dark Mode','Авто темний режим','Авто темний режим')}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{t('Dark 21:00–07:00 automatically','Темний 21:00–07:00 автоматично','Темний 21:00–07:00 автоматично')}</div>
+                </div>
+                <button onClick={() => {
+                  const isManual = localStorage.getItem('uk_theme_manual') === 'true'
+                  if (isManual) {
+                    localStorage.removeItem('uk_theme_manual')
+                    alert(t('Auto mode enabled! Theme will switch at 21:00 / 07:00','Авто режим увімкнено! Тема перемикається о 21:00 / 07:00','Авто режим увімкнено! Тема перемикається о 21:00 / 07:00'))
+                  } else {
+                    localStorage.setItem('uk_theme_manual', 'true')
+                    alert(t('Manual mode. Use Dark/Light button to switch.','Ручний режим. Використай кнопку Темний/Світло.','Ручний режим. Використай кнопку Темний/Світло.'))
+                  }
+                }} style={{ background: localStorage.getItem('uk_theme_manual') !== 'true' ? '#1d4ed8' : (dark ? '#334155' : '#e2e8f0'), border: 'none', borderRadius: 20, padding: '6px 14px', color: localStorage.getItem('uk_theme_manual') !== 'true' ? '#fff' : C.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  {localStorage.getItem('uk_theme_manual') !== 'true' ? t('Auto','Авто','Авто') : t('Manual','Вручну','Вручну')}
+                </button>
+              </div>
+            </div>
+
             <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>🔒 {t('Privacy & Security', 'Конфіденційність', 'Конфіденційність')}</div>
               {[
@@ -2964,24 +3007,85 @@ function smartIcon(doc) {
 }
 
 function DocCard({ doc, cat, lang, onOpen, dark }) {
+  const { useState: useS, useRef } = (window as any).__React || {}
+  const [swipeX, setSwipeX] = React.useState(0)
+  const [showMenu, setShowMenu] = React.useState(false)
+  const touchStartX = React.useRef(0)
   const title = lang === 'ru' && doc.title_ru ? doc.title_ru : doc.title
   const icon = smartIcon(doc) || cat.icon
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+  const handleTouchEnd = (e) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX
+    if (diff > 60) setShowMenu(true)   // swipe left → show menu
+    if (diff < -60) setShowMenu(false) // swipe right → close menu
+  }
+
+  const copyNumber = () => {
+    if (doc.number) {
+      navigator.clipboard.writeText(doc.number)
+      alert((lang !== 'en' ? 'Номер скопійовано!' : 'Number copied!'))
+    }
+    setShowMenu(false)
+  }
+
+  const showQR = () => {
+    const text = [doc.title, doc.number, doc.valid_until].filter(Boolean).join(' | ')
+    window.open('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(text), '_blank')
+    setShowMenu(false)
+  }
+
+  const shareDoc = () => {
+    const text = doc.title + (doc.number ? ' · ' + doc.number : '') + (doc.valid_until ? ' · until ' + doc.valid_until : '')
+    if (navigator.share) {
+      navigator.share({ title: doc.title, text: text }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(text)
+      alert(lang !== 'en' ? 'Скопійовано!' : 'Copied!')
+    }
+    setShowMenu(false)
+  }
+
   return (
-    <div onClick={onOpen} style={{ background: '#fff', borderRadius: 14, marginBottom: 8, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${cat.color}` }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a202c', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          {doc.pinned && <span style={{ fontSize: 10 }}>📌</span>}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
-          {doc.valid_until && <ExpiryBadge d={doc.valid_until} />}
+    <div style={{ position: 'relative', marginBottom: 8, borderRadius: 14, overflow: 'hidden' }}>
+      {/* Swipe action buttons revealed on left swipe */}
+      {showMenu && (
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', zIndex: 1 }}>
+          {doc.number && (
+            <button onClick={copyNumber} style={{ background: '#3b82f6', border: 'none', color: '#fff', padding: '0 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ fontSize: 18 }}>📋</span>Copy
+            </button>
+          )}
+          <button onClick={showQR} style={{ background: '#8b5cf6', border: 'none', color: '#fff', padding: '0 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 11, fontWeight: 700 }}>
+            <span style={{ fontSize: 18 }}>📱</span>QR
+          </button>
+          <button onClick={shareDoc} style={{ background: '#0891b2', border: 'none', color: '#fff', padding: '0 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, fontSize: 11, fontWeight: 700 }}>
+            <span style={{ fontSize: 18 }}>↗️</span>Share
+          </button>
         </div>
-        {doc.number && <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#4a5568', fontWeight: 600, letterSpacing: '0.04em' }}>{doc.number}</div>}
-        {doc.valid_until && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{lang !== 'en' ? 'до' : 'until'} {formatDate(doc.valid_until)}</div>}
-        {(doc.document_photos?.length || 0) > 0 && (
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>📸 {doc.document_photos!.length} {lang !== 'en' ? 'фото' : 'photo(s)'}</div>
-        )}
+      )}
+      <div
+        onClick={() => { if (!showMenu) onOpen(); else setShowMenu(false) }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${cat.color}`, transform: showMenu ? 'translateX(-120px)' : 'translateX(0)', transition: 'transform 0.2s ease', position: 'relative', zIndex: 2 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: dark ? '#f1f5f9' : '#1a202c', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            {doc.pinned && <span style={{ fontSize: 10 }}>📌</span>}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+            {doc.valid_until && <ExpiryBadge d={doc.valid_until} />}
+          </div>
+          {doc.number && <div style={{ fontSize: 12, fontFamily: 'monospace', color: dark ? '#94a3b8' : '#4a5568', fontWeight: 600, letterSpacing: '0.04em' }}>{doc.number}</div>}
+          {doc.valid_until && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{lang !== 'en' ? 'до' : 'until'} {formatDate(doc.valid_until)}</div>}
+          {(doc.document_photos?.length || 0) > 0 && (
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>📸 {doc.document_photos!.length} {lang !== 'en' ? 'фото' : 'photo(s)'}</div>
+          )}
+        </div>
+        <div style={{ color: '#cbd5e0', fontSize: 20 }}>›</div>
       </div>
-      <div style={{ color: '#cbd5e0', fontSize: 20 }}>›</div>
     </div>
   )
 }
