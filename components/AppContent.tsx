@@ -115,6 +115,9 @@ export default function AppContent() {
   const [finMonth, setFinMonth] = useState(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') })
   const [shiftStart, setShiftStart] = useState(null)
   const [shiftMiles, setShiftMiles] = useState('')
+  const [aiScanning, setAiScanning] = useState(false)
+  const [weeklyReport, setWeeklyReport] = useState('')
+  const [reportLoading, setReportLoading] = useState(false)
   const [incForm, setIncForm] = useState({ date: new Date().toISOString().slice(0,10), amount: '', note: '' })
   const [mileForm, setMileForm] = useState({ date: new Date().toISOString().slice(0,10), miles: '', note: '' })
   const [finSubTab, setFinSubTab] = useState('log')
@@ -1374,6 +1377,35 @@ export default function AppContent() {
               )}
             </div>
 
+            {/* ── AI WEEKLY REPORT ── */}
+            <div style={{ background: dark ? '#1e1b4b' : '#f5f3ff', border: '1px solid ' + (dark ? '#4c1d95' : '#c4b5fd'), borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: weeklyReport ? 10 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: 1 }}>🤖 {t('AI Weekly Summary','AI Тижневий звіт','AI Тижневий звіт')}</div>
+                  {!weeklyReport && <div style={{ fontSize: 11, color: dark ? '#a78bfa' : '#6d28d9', marginTop: 2 }}>{t('Get AI insights on your earnings & docs','Отримай AI аналіз заробітку та документів','Отримай AI аналіз заробітку та документів')}</div>}
+                </div>
+                <button onClick={async () => {
+                  setReportLoading(true)
+                  try {
+                    const res = await fetch('/api/ai/weekly-report', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ finance, docs, lang })
+                    })
+                    const data = await res.json()
+                    if (data.summary) setWeeklyReport(data.summary)
+                    else setWeeklyReport(t('Could not generate report. Check AI settings.','Не вдалося згенерувати звіт.','Не вдалося згенерувати звіт.'))
+                  } catch (err) {
+                    setWeeklyReport(t('AI not available.','AI недоступний.','AI недоступний.'))
+                  }
+                  setReportLoading(false)
+                }} style={{ background: '#7c3aed', border: 'none', borderRadius: 20, padding: '6px 14px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, marginLeft: 8 }}>
+                  {reportLoading ? '...' : weeklyReport ? t('Refresh','Оновити','Оновити') : t('Generate','Згенерувати','Згенерувати')}
+                </button>
+              </div>
+              {weeklyReport && <div style={{ fontSize: 13, color: dark ? '#e2e8f0' : '#1e1b4b', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{weeklyReport}</div>}
+            </div>
+
             {/* ── QUICK ADD BUTTONS ── */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
               <button onClick={function() {
@@ -1643,6 +1675,37 @@ export default function AppContent() {
         {tab === 'docs' && view === 'add' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>➕ {t('New Document', 'Новий документ', 'Новий документ')}</div>
+            {/* AI Scanner */}
+            <button onClick={async () => {
+              const input = document.createElement('input')
+              input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment'
+              input.onchange = async (e) => {
+                const file = e.target.files && e.target.files[0]
+                if (!file) return
+                setAiScanning(true)
+                const reader = new FileReader()
+                reader.onload = async (ev) => {
+                  try {
+                    const base64 = ev.target.result.split(',')[1]
+                    const res = await fetch('/api/ai/scan-doc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: base64, mediaType: file.type || 'image/jpeg' }) })
+                    const data = await res.json()
+                    if (data.document) {
+                      const d = data.document
+                      setDocForm(function(f) { return { ...f, title: d.title || f.title, category: d.category || f.category, number: d.number || f.number, valid_until: d.valid_until || f.valid_until, valid_from: d.valid_from || f.valid_from, notes: d.notes || f.notes } })
+                      alert(t('AI filled the form! Check and confirm.','AI заповнив форму! Перевір і підтвердь.','AI заповнив форму! Перевір і підтвердь.'))
+                    } else {
+                      alert(t('Could not read document. Try clearer photo.','Не вдалося прочитати. Спробуй чіткіше фото.','Не вдалося прочитати. Спробуй чіткіше фото.'))
+                    }
+                  } catch(err) { alert('AI scan error') }
+                  setAiScanning(false)
+                }
+                reader.readAsDataURL(file)
+              }
+              input.click()
+            }} style={{ width: '100%', background: 'linear-gradient(135deg,#1d4ed8,#7c3aed)', border: 'none', borderRadius: 12, padding: 14, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {aiScanning ? '🔄 ' + t('Scanning...','Сканування...','Сканування...') : '📸 ' + t('Scan with AI (auto-fill)','Сканувати з AI','Сканувати з AI')}
+            </button>
+
             <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
@@ -1672,6 +1735,37 @@ export default function AppContent() {
         {tab === 'docs' && view === 'edit' && selDoc && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>✏️ {t('Edit Document', 'Редагувати документ', 'Редагувати документ')}</div>
+            {/* AI Scanner */}
+            <button onClick={async () => {
+              const input = document.createElement('input')
+              input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment'
+              input.onchange = async (e) => {
+                const file = e.target.files && e.target.files[0]
+                if (!file) return
+                setAiScanning(true)
+                const reader = new FileReader()
+                reader.onload = async (ev) => {
+                  try {
+                    const base64 = ev.target.result.split(',')[1]
+                    const res = await fetch('/api/ai/scan-doc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: base64, mediaType: file.type || 'image/jpeg' }) })
+                    const data = await res.json()
+                    if (data.document) {
+                      const d = data.document
+                      setDocForm(function(f) { return { ...f, title: d.title || f.title, category: d.category || f.category, number: d.number || f.number, valid_until: d.valid_until || f.valid_until, valid_from: d.valid_from || f.valid_from, notes: d.notes || f.notes } })
+                      alert(t('AI filled the form! Check and confirm.','AI заповнив форму! Перевір і підтвердь.','AI заповнив форму! Перевір і підтвердь.'))
+                    } else {
+                      alert(t('Could not read document. Try clearer photo.','Не вдалося прочитати. Спробуй чіткіше фото.','Не вдалося прочитати. Спробуй чіткіше фото.'))
+                    }
+                  } catch(err) { alert('AI scan error') }
+                  setAiScanning(false)
+                }
+                reader.readAsDataURL(file)
+              }
+              input.click()
+            }} style={{ width: '100%', background: 'linear-gradient(135deg,#1d4ed8,#7c3aed)', border: 'none', borderRadius: 12, padding: 14, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {aiScanning ? '🔄 ' + t('Scanning...','Сканування...','Сканування...') : '📸 ' + t('Scan with AI (auto-fill)','Сканувати з AI','Сканувати з AI')}
+            </button>
+
             <FField label={t('Category', 'Категорія', 'Категорія')}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
