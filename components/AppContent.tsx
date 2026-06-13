@@ -1505,7 +1505,7 @@ export default function AppContent() {
             </div>
 
             {confirmDel === selDoc.id && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 14, padding: 18, textAlign: 'center' }}>
-              <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this document?', 'Удалить этот документ?')}</div>
+              <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this document?', 'Удалить этот документ?', 'Видалити цей документ?')}</div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
                 <button onClick={() => handleDeleteDoc(selDoc.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
@@ -1523,18 +1523,18 @@ export default function AppContent() {
                 {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
               </div>
             </FField>
-            <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. CSCS Green Card" style={inputStyle} /></FField>
-            <FField label={t('Title (RU)', 'Название (RU)')}><input value={docForm.title_ru} onChange={e => setDocForm(f => ({ ...f, title_ru: e.target.value }))} placeholder="напр. Карта CSCS" style={inputStyle} /></FField>
+            <FField label={t('Title (EN)', 'Название (EN)', 'Назва (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. CSCS Green Card" style={inputStyle} /></FField>
+            <FField label={t('Title (RU)', 'Название (RU)', 'Назва (RU)')}><input value={docForm.title_ru} onChange={e => setDocForm(f => ({ ...f, title_ru: e.target.value }))} placeholder="напр. Карта CSCS" style={inputStyle} /></FField>
             <FField label={t('Number / Code', 'Номер / Код', 'Номер / Код')}><input value={docForm.number} onChange={e => setDocForm(f => ({ ...f, number: e.target.value }))} placeholder="e.g. WZL F8D 7A4" style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16 }} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
-              <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('From', 'С', 'Від')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('Until', 'До', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
-            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (EN)', 'Заметки (EN)', 'Замітки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (RU)', 'Заметки (RU)', 'Замітки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
-              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pin this document', 'Закрепить')}</span>
+              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pin this document', 'Закрепить', 'Закріпити')}</span>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => switchTab('docs')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
@@ -1552,18 +1552,18 @@ export default function AppContent() {
                 {CATEGORIES.map(c => <button key={c.id} onClick={() => setDocForm(f => ({ ...f, category: c.id }))} style={{ background: docForm.category === c.id ? c.color : C.bg, color: docForm.category === c.id ? '#fff' : C.textSub, border: `1.5px solid ${docForm.category === c.id ? c.color : C.border}`, borderRadius: 10, padding: '10px 6px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 20 }}>{c.icon}</span><span>{lang !== 'en' ? c.labelRu : c.label}</span></button>)}
               </div>
             </FField>
-            <FField label={t('Title (EN)', 'Название (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Title (RU)', 'Название (RU)')}><input value={docForm.title_ru} onChange={e => setDocForm(f => ({ ...f, title_ru: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Title (EN)', 'Название (EN)', 'Назва (EN)')}><input value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Title (RU)', 'Название (RU)', 'Назва (RU)')}><input value={docForm.title_ru} onChange={e => setDocForm(f => ({ ...f, title_ru: e.target.value }))} style={inputStyle} /></FField>
             <FField label={t('Number / Code', 'Номер / Код', 'Номер / Код')}><input value={docForm.number} onChange={e => setDocForm(f => ({ ...f, number: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16 }} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FField label={t('From', 'С')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
-              <FField label={t('Until', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('From', 'С', 'Від')}><input type="date" value={docForm.valid_from} onChange={e => setDocForm(f => ({ ...f, valid_from: e.target.value }))} style={inputStyle} /></FField>
+              <FField label={t('Until', 'До', 'До')}><input type="date" value={docForm.valid_until} onChange={e => setDocForm(f => ({ ...f, valid_until: e.target.value }))} style={inputStyle} /></FField>
             </div>
-            <FField label={t('Notes (EN)', 'Заметки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
-            <FField label={t('Notes (RU)', 'Заметки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (EN)', 'Заметки (EN)', 'Замітки (EN)')}><textarea value={docForm.notes} onChange={e => setDocForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes (RU)', 'Заметки (RU)', 'Замітки (RU)')}><textarea value={docForm.notes_ru} onChange={e => setDocForm(f => ({ ...f, notes_ru: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }} onClick={() => setDocForm(f => ({ ...f, pinned: !f.pinned }))}>
               <div style={{ width: 22, height: 22, borderRadius: 6, background: docForm.pinned ? C.blue : 'transparent', border: docForm.pinned ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>{docForm.pinned ? '✓' : ''}</div>
-              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pinned', 'Закреплён')}</span>
+              <span style={{ fontSize: 13, color: C.textSub }}>📌 {t('Pinned', 'Закреплён', 'Закріплено')}</span>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setView('detail')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
@@ -1579,7 +1579,7 @@ export default function AppContent() {
               <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
                 <div style={{ fontSize: 50, marginBottom: 12 }}>📘</div>
                 <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>{t('No passports added', 'Паспорти не додані', 'Паспорти не додані')}</div>
-                <div style={{ fontSize: 13, marginBottom: 20 }}>{t('Add passport with photos of key pages', 'Добавь паспорт с фото страниц')}</div>
+                <div style={{ fontSize: 13, marginBottom: 20 }}>{t('Add passport with photos of key pages', 'Добавь паспорт с фото страниц', 'Додай паспорт з фото сторінок')}</div>
               </div>
             ) : (
               passports.map(p => (
@@ -1590,7 +1590,7 @@ export default function AppContent() {
                       <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>{p.type}</div>
                       <div style={{ fontSize: 13, fontFamily: 'monospace', color: C.textSub, fontWeight: 600 }}>{p.number}</div>
                       <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-                        {p.passport_photos.length} {t('photos', 'фото')}
+                        {p.passport_photos.length} {t('photos', 'фото', 'фото')}
                         {p.expiry_date && <> · <ExpiryBadge d={p.expiry_date} /></>}
                       </div>
                     </div>
@@ -1607,13 +1607,13 @@ export default function AppContent() {
         {tab === 'passport' && view === 'addPassport' && (
           <div style={{ background: C.surface, borderRadius: 16, padding: 24 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.navy, marginBottom: 20 }}>📘 {t('Add Passport', 'Додати паспорт', 'Додати паспорт')}</div>
-            <FField label={t('Type', 'Тип')}>
+            <FField label={t('Type', 'Тип', 'Тип')}>
               <select value={passForm.type} onChange={e => setPassForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
                 {['Ukrainian Passport', 'Ukrainian ID Card', 'UK BRP Card', 'UK Passport', 'EU Passport', 'Other'].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </FField>
-            <FField label={t('Number', 'Номер')}><input value={passForm.number} onChange={e => setPassForm(f => ({ ...f, number: e.target.value }))} placeholder="AA123456" style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16, letterSpacing: '0.06em' }} /></FField>
-            <FField label={t('Issued by', 'Ким виданий', 'Ким виданий')}><input value={passForm.issued_by} onChange={e => setPassForm(f => ({ ...f, issued_by: e.target.value }))} placeholder={t('Ministry of Internal Affairs', 'МВД Украины')} style={inputStyle} /></FField>
+            <FField label={t('Number', 'Номер', 'Номер')}><input value={passForm.number} onChange={e => setPassForm(f => ({ ...f, number: e.target.value }))} placeholder="AA123456" style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 16, letterSpacing: '0.06em' }} /></FField>
+            <FField label={t('Issued by', 'Ким виданий', 'Ким виданий')}><input value={passForm.issued_by} onChange={e => setPassForm(f => ({ ...f, issued_by: e.target.value }))} placeholder={t('Ministry of Internal Affairs', 'МВД Украины', 'МВС України')} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('Issued', 'Дата видачі', 'Дата видачі')}><input type="date" value={passForm.issued_date} onChange={e => setPassForm(f => ({ ...f, issued_date: e.target.value }))} style={inputStyle} /></FField>
               <FField label={t('Expires', 'Термін дії', 'Термін дії')}><input type="date" value={passForm.expiry_date} onChange={e => setPassForm(f => ({ ...f, expiry_date: e.target.value }))} style={inputStyle} /></FField>
@@ -1640,7 +1640,7 @@ export default function AppContent() {
             <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12 }}>
               {selPass.issued_by   && <DRow label={t('Issued by', 'Ким виданий', 'Ким виданий')}>{selPass.issued_by}</DRow>}
               {selPass.issued_date && <DRow label={t('Issued', 'Дата видачі', 'Дата видачі')}>{formatDate(selPass.issued_date)}</DRow>}
-              {selPass.expiry_date && <DRow label={t('Expires', 'Срок')}><span>{formatDate(selPass.expiry_date)}</span><ExpiryBadge d={selPass.expiry_date} /></DRow>}
+              {selPass.expiry_date && <DRow label={t('Expires', 'Срок', 'Термін')}><span>{formatDate(selPass.expiry_date)}</span><ExpiryBadge d={selPass.expiry_date} /></DRow>}
               <DRow label={t('Passport number', 'Номер паспорта', 'Номер паспорта')}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 800, color: C.navy }}>{selPass.number}</span>
@@ -1668,7 +1668,7 @@ export default function AppContent() {
               )}
               <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>{t('Add page photo', 'Додати фото сторінки', 'Додати фото сторінки')}</div>
-                <input value={photoLabel} onChange={e => setPhotoLabel(e.target.value)} placeholder={t('Label (e.g. Main page)', 'Подпись (напр. Главная страница)')} style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
+                <input value={photoLabel} onChange={e => setPhotoLabel(e.target.value)} placeholder={t('Label (e.g. Main page)', 'Подпись (напр. Главная страница)', 'Підпис (напр. Головна сторінка)')} style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
 
 
                 {saving ? (
@@ -1691,7 +1691,7 @@ export default function AppContent() {
             <button onClick={() => setConfirmDel(selPass.id)} style={{ width: '100%', background: '#fee2e2', border: '1.5px solid #fca5a5', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.red }}>🗑 {t('Delete Passport', 'Видалити паспорт', 'Видалити паспорт')}</button>
             {confirmDel === selPass.id && (
               <div style={{ background: '#fee2e2', borderRadius: 12, padding: 16, marginTop: 10, textAlign: 'center' }}>
-                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 12 }}>{t('Delete this passport?', 'Удалить этот паспорт?')}</div>
+                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 12 }}>{t('Delete this passport?', 'Удалить этот паспорт?', 'Видалити цей паспорт?')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
                   <button onClick={() => handleDeletePassport(selPass.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
@@ -1737,8 +1737,8 @@ export default function AppContent() {
             ) : (
               <div style={{ background: C.surface, borderRadius: 16, padding: '20px 18px', marginBottom: 14, border: `2px dashed ${C.border}`, textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.navy, marginBottom: 4 }}>{t('No home address set', 'Адрес прописки не добавлен')}</div>
-                <div style={{ fontSize: 12, color: C.muted }}>{t('Add an address and mark it as home', 'Добавь адрес и отметь его как главный')}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.navy, marginBottom: 4 }}>{t('No home address set', 'Адрес прописки не добавлен', 'Адресу прописки не додано')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Add an address and mark it as home', 'Добавь адрес и отметь его как главный', 'Додай адресу та позначте її як головну')}</div>
               </div>
             )}
 
@@ -1848,7 +1848,7 @@ export default function AppContent() {
 
             {confirmDel === selAddr.id && (
               <div style={{ background: '#fee2e2', borderRadius: 14, padding: 18, textAlign: 'center' }}>
-                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this address?', 'Удалить этот адрес?')}</div>
+                <div style={{ fontSize: 14, color: '#991b1b', fontWeight: 700, marginBottom: 14 }}>{t('Delete this address?', 'Удалить этот адрес?', 'Видалити цю адресу?')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button onClick={() => setConfirmDel(null)} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 13 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
                   <button onClick={() => handleDeleteAddress(selAddr.id)} style={{ flex: 1, background: C.red, border: 'none', borderRadius: 8, padding: 10, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>{t('Delete', 'Видалити', 'Видалити')}</button>
@@ -1872,31 +1872,31 @@ export default function AppContent() {
               </div>
             </FField>
 
-            <FField label={t('Label (EN)', 'Название (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} placeholder="e.g. Oxford Home, GP Surgery" style={inputStyle} /></FField>
-            <FField label={t('Label (RU)', 'Название (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} placeholder="напр. Дом в Оксфорде, Врач" style={inputStyle} /></FField>
-            <FField label={t('Address line 1', 'Адрес строка 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} placeholder="e.g. 12 Rose Street" style={inputStyle} /></FField>
-            <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} placeholder={t('Flat, area (optional)', 'Квартира, район (необязательно)')} style={inputStyle} /></FField>
+            <FField label={t('Label (EN)', 'Название (EN)', 'Назва (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} placeholder="e.g. Oxford Home, GP Surgery" style={inputStyle} /></FField>
+            <FField label={t('Label (RU)', 'Название (RU)', 'Назва (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} placeholder="напр. Дом в Оксфорде, Врач" style={inputStyle} /></FField>
+            <FField label={t('Address line 1', 'Адрес строка 1', 'Адреса рядок 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} placeholder="e.g. 12 Rose Street" style={inputStyle} /></FField>
+            <FField label={t('Address line 2', 'Адрес строка 2', 'Адреса рядок 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} placeholder={t('Flat, area (optional)', 'Квартира, район (необязательно)', 'Квартира, район (необовʼязково)')} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('City', 'Місто', 'Місто')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} placeholder="Oxford" style={inputStyle} /></FField>
-              <FField label={t('Postcode', 'Почтовый индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
+              <FField label={t('Postcode', 'Почтовый индекс', 'Поштовий індекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} placeholder="OX1 1AB" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
             </div>
             <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} placeholder="United Kingdom" style={inputStyle} /></FField>
-            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('e.g. near bus stop, ring bell 2', 'напр. возле остановки, звонок 2')} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
+            <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder={t('e.g. near bus stop, ring bell 2', 'напр. возле остановки, звонок 2', 'напр. біля зупинки, дзвінок 2')} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
 
             {/* Home toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, background: addrForm.is_home ? '#fef9c3' : C.bg, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1.5px solid ${addrForm.is_home ? '#fde047' : C.border}` }}
               onClick={() => setAddrForm(f => ({ ...f, is_home: !f.is_home }))}>
               <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Set as Home Address', 'Сделать адресом прописки')}</div>
-                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address in UK', 'Главный зарегистрированный адрес в UK')}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Set as Home Address', 'Сделать адресом прописки', 'Зробити адресою прописки')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address in UK', 'Главный зарегистрированный адрес в UK', 'Головна зареєстрована адреса в UK')}</div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => switchTab('address')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleAddAddress} disabled={!addrForm.label || !addrForm.line1 || saving} style={{ flex: 2, background: addrForm.label && addrForm.line1 ? '#2e7d32' : '#cbd5e0', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: addrForm.label && addrForm.line1 ? 'pointer' : 'not-allowed', color: '#fff', fontWeight: 700 }}>
-                {saving ? '⏳' : t('Save Address', 'Сохранить адрес')}
+                {saving ? '⏳' : t('Save Address', 'Сохранить адрес', 'Зберегти адресу')}
               </button>
             </div>
           </div>
@@ -1913,13 +1913,13 @@ export default function AppContent() {
                 ))}
               </div>
             </FField>
-            <FField label={t('Label (EN)', 'Название (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Label (RU)', 'Название (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Address line 1', 'Адрес строка 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} style={inputStyle} /></FField>
-            <FField label={t('Address line 2', 'Адрес строка 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Label (EN)', 'Название (EN)', 'Назва (EN)')}><input value={addrForm.label} onChange={e => setAddrForm(f => ({ ...f, label: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Label (RU)', 'Название (RU)', 'Назва (RU)')}><input value={addrForm.label_ru} onChange={e => setAddrForm(f => ({ ...f, label_ru: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Address line 1', 'Адрес строка 1', 'Адреса рядок 1')}><input value={addrForm.line1} onChange={e => setAddrForm(f => ({ ...f, line1: e.target.value }))} style={inputStyle} /></FField>
+            <FField label={t('Address line 2', 'Адрес строка 2', 'Адреса рядок 2')}><input value={addrForm.line2} onChange={e => setAddrForm(f => ({ ...f, line2: e.target.value }))} style={inputStyle} /></FField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FField label={t('City', 'Місто', 'Місто')}><input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} style={inputStyle} /></FField>
-              <FField label={t('Postcode', 'Индекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
+              <FField label={t('Postcode', 'Индекс', 'Індекс')}><input value={addrForm.postcode} onChange={e => setAddrForm(f => ({ ...f, postcode: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }} /></FField>
             </div>
             <FField label={t('Country', 'Країна', 'Країна')}><input value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} style={inputStyle} /></FField>
             <FField label={t('Notes', 'Нотатки', 'Нотатки')}><textarea value={addrForm.notes} onChange={e => setAddrForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></FField>
@@ -1928,13 +1928,13 @@ export default function AppContent() {
               <div style={{ width: 24, height: 24, borderRadius: 6, background: addrForm.is_home ? '#f59e0b' : 'transparent', border: addrForm.is_home ? 'none' : `2px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{addrForm.is_home ? '✓' : ''}</div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: addrForm.is_home ? '#854d0e' : C.text }}>🏠 {t('Home Address', 'Адреса прописки', 'Адреса прописки')}</div>
-                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address', 'Главный зарегистрированный адрес')}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{t('Your main registered address', 'Главный зарегистрированный адрес', 'Головна зареєстрована адреса')}</div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setView('detail')} style={{ flex: 1, background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: C.textSub, fontWeight: 600 }}>{t('Cancel', 'Скасувати', 'Скасувати')}</button>
               <button onClick={handleUpdateAddress} disabled={saving} style={{ flex: 2, background: saving ? '#94a3b8' : '#2e7d32', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, cursor: 'pointer', color: '#fff', fontWeight: 700 }}>
-                {saving ? '⏳' : t('Save Changes', 'Сохранить изменения')}
+                {saving ? '⏳' : t('Save Changes', 'Сохранить изменения', 'Зберегти зміни')}
               </button>
             </div>
           </div>
@@ -2557,8 +2557,8 @@ export default function AppContent() {
                 {AVATARS.map(a => <button key={a} onClick={() => setProfForm(f => ({ ...f, avatar: a }))} style={{ width: 44, height: 44, borderRadius: 10, fontSize: 24, border: `2px solid ${profForm.avatar === a ? C.navy : C.border}`, background: profForm.avatar === a ? C.bg : 'transparent', cursor: 'pointer' }}>{a}</button>)}
               </div>
             </FField>
-            <FField label={t('Full name (EN)', 'Имя (EN)')}><input value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Sergii Palesika" style={inputStyle} /></FField>
-            <FField label={t('Full name (RU)', 'Имя (RU)')}><input value={profForm.name_ru || ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} placeholder="Сергей Палесика" style={inputStyle} /></FField>
+            <FField label={t('Full name (EN)', 'Имя (EN)', 'Імʼя (EN)')}><input value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Sergii Palesika" style={inputStyle} /></FField>
+            <FField label={t('Full name (RU)', 'Имя (RU)', 'Імʼя (RU)')}><input value={profForm.name_ru || ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} placeholder="Сергей Палесика" style={inputStyle} /></FField>
             <FField label={t('Date of Birth', 'Дата народження', 'Дата народження')}><input type="date" value={profForm.dob || ''} onChange={e => setProfForm(f => ({ ...f, dob: e.target.value }))} style={inputStyle} /></FField>
             <FField label={t('Nationality', 'Громадянство', 'Громадянство')}>
               <select value={profForm.nationality || 'Ukrainian'} onChange={e => setProfForm(f => ({ ...f, nationality: e.target.value }))} style={inputStyle}>
