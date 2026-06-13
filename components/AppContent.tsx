@@ -1062,7 +1062,7 @@ export default function AppContent() {
   const handleSaveProfile = async () => {
     if (!user) return
     setSaving(true)
-    await DB.upsertProfile(user.id, { name: profForm.name || '', name_ru: profForm.name_ru || '', dob: profForm.dob || '', nationality: profForm.nationality || 'Ukrainian', avatar: profForm.avatar || '👤' })
+    await DB.upsertProfile(user.id, { name: profForm.name || '', name_ru: profForm.name_ru || '', dob: profForm.dob || '', nationality: profForm.nationality || 'Ukrainian', avatar: profForm.avatar || '👤', addr_line1: profForm.addr_line1 || '', addr_line2: profForm.addr_line2 || '', addr_city: profForm.addr_city || '', addr_postcode: profForm.addr_postcode || '', addr_country: profForm.addr_country || '' })
     const fresh = await DB.getProfile(user.id)
     setProfile(fresh); setSaving(false); setView('list')
   }
@@ -1184,7 +1184,7 @@ export default function AppContent() {
             {[
               { icon: '📄', val: docs.length, en: 'Documents', ru: 'Документов' },
               { icon: '⚠️', val: expiring60.length, en: 'Expiring', ru: 'Истекает', warn: expiring60.length > 0 },
-              { icon: '✅', val: `${todoDone}/${todos.length}`, en: 'Tasks', ru: 'Задач' },
+              { icon: '💼', val: jobsList.length, en: 'Jobs', ru: 'Вакансій' },
             ].map((s, i) => (
               <div key={i} style={{ background: s.warn ? 'rgba(234,88,12,0.2)' : 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 10px', textAlign: 'center', border: s.warn ? '1px solid rgba(234,88,12,0.4)' : '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{s.icon} {lang !== 'en' ? s.ru : s.en}</div>
@@ -2443,14 +2443,50 @@ export default function AppContent() {
                 <span style={{ fontSize: 22 }}>🔐</span>
                 <span>PIN</span>
               </button>
-              <button onClick={() => switchTab('medical')} style={{ background: dark ? '#1e293b' : C.surface, border: `1.5px solid ${D.border}`, borderRadius: 12, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: D.navy, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 22 }}>🏥</span>
-                <span>{t('Health','Здоровʼя','Здоровʼя')}</span>
-              </button>
+
             </div>
             <button onClick={() => setView('export')} style={{ width: '100%', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#166534', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               📤 {t('Export my data', 'Експортувати дані', 'Експортувати дані')}
             </button>
+
+            {/* Address card with copy buttons */}
+            {(profile?.addr_line1 || addresses.length > 0) && (function() {
+              const homeAddr = addresses.find(function(a){ return a.is_home }) || addresses[0]
+              const line1 = profile?.addr_line1 || (homeAddr && homeAddr.line1) || ''
+              const line2 = profile?.addr_line2 || (homeAddr && homeAddr.line2) || ''
+              const city = profile?.addr_city || (homeAddr && homeAddr.city) || ''
+              const postcode = profile?.addr_postcode || (homeAddr && homeAddr.postcode) || ''
+              const country = profile?.addr_country || (homeAddr && homeAddr.country) || ''
+              if (!line1 && !postcode) return null
+              const copyField = function(val, label) {
+                navigator.clipboard.writeText(val || '')
+                alert(label + ' copied!')
+              }
+              const fullAddr = [line1, line2, city, postcode, country].filter(Boolean).join(', ')
+              return (
+                <div style={{ background: dark ? '#1e293b' : C.surface, borderRadius: 14, padding: '16px 18px', marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: D.navy, marginBottom: 12 }}>🏠 {t('My Address', 'Моя адреса', 'Моя адреса')}</div>
+                  {[
+                    { label: t('Address line 1','Адреса 1','Адреса 1'), val: line1 },
+                    { label: t('Address line 2','Адреса 2','Адреса 2'), val: line2 },
+                    { label: t('City','Місто','Місто'), val: city },
+                    { label: t('Postcode','Поштовий індекс','Поштовий індекс'), val: postcode },
+                    { label: t('Country','Країна','Країна'), val: country },
+                    { label: t('Full address','Повна адреса','Повна адреса'), val: fullAddr },
+                  ].filter(function(r){ return r.val }).map(function(row) { return (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid ' + D.border }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: D.muted }}>{row.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: D.navy, marginTop: 2 }}>{row.val}</div>
+                      </div>
+                      <button onClick={function(){ copyField(row.val, row.label) }} style={{ background: 'none', border: '1px solid ' + D.border, borderRadius: 8, padding: '4px 10px', fontSize: 12, cursor: 'pointer', color: C.blue, flexShrink: 0, marginLeft: 8 }}>
+                        📋
+                      </button>
+                    </div>
+                  )})}
+                </div>
+              )
+            })()}
 
             <div style={{ background: C.surface, borderRadius: 14, padding: '16px 18px' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 12 }}>🔒 {t('Privacy & Security', 'Конфіденційність', 'Конфіденційність')}</div>
@@ -2560,6 +2596,12 @@ export default function AppContent() {
             <FField label={t('Full name (EN)', 'Имя (EN)', 'Імʼя (EN)')}><input value={profForm.name || ''} onChange={e => setProfForm(f => ({ ...f, name: e.target.value }))} placeholder="Sergii Palesika" style={inputStyle} /></FField>
             <FField label={t('Full name (RU)', 'Имя (RU)', 'Імʼя (RU)')}><input value={profForm.name_ru || ''} onChange={e => setProfForm(f => ({ ...f, name_ru: e.target.value }))} placeholder="Сергей Палесика" style={inputStyle} /></FField>
             <FField label={t('Date of Birth', 'Дата народження', 'Дата народження')}><input type="date" value={profForm.dob || ''} onChange={e => setProfForm(f => ({ ...f, dob: e.target.value }))} style={inputStyle} /></FField>
+          <div style={{ fontSize: 12, fontWeight: 700, color: D.muted, textTransform: 'uppercase', letterSpacing: 1, margin: '12px 0 6px' }}>🏠 {t('Address','Адреса','Адреса')}</div>
+          <FField label={t('Address line 1','Адреса рядок 1','Адреса рядок 1')}><input value={profForm.addr_line1 || ''} onChange={e => setProfForm(f => ({ ...f, addr_line1: e.target.value }))} placeholder="4 Henley Road" style={inputStyle} /></FField>
+          <FField label={t('Address line 2','Адреса рядок 2','Адреса рядок 2')}><input value={profForm.addr_line2 || ''} onChange={e => setProfForm(f => ({ ...f, addr_line2: e.target.value }))} placeholder="Marlow" style={inputStyle} /></FField>
+          <FField label={t('City','Місто','Місто')}><input value={profForm.addr_city || ''} onChange={e => setProfForm(f => ({ ...f, addr_city: e.target.value }))} placeholder="Marlow" style={inputStyle} /></FField>
+          <FField label={t('Postcode','Поштовий індекс','Поштовий індекс')}><input value={profForm.addr_postcode || ''} onChange={e => setProfForm(f => ({ ...f, addr_postcode: e.target.value }))} placeholder="SL7 2DA" style={inputStyle} /></FField>
+          <FField label={t('Country','Країна','Країна')}><input value={profForm.addr_country || ''} onChange={e => setProfForm(f => ({ ...f, addr_country: e.target.value }))} placeholder="United Kingdom" style={inputStyle} /></FField>
             <FField label={t('Nationality', 'Громадянство', 'Громадянство')}>
               <select value={profForm.nationality || 'Ukrainian'} onChange={e => setProfForm(f => ({ ...f, nationality: e.target.value }))} style={inputStyle}>
                 {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
