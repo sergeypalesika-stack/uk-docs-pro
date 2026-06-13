@@ -1,4 +1,4 @@
-import { createMcpHandler } from 'mcp-handler'
+import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 
@@ -176,4 +176,19 @@ const handler = createMcpHandler(
   }
 )
 
-export { handler as GET, handler as POST, handler as DELETE }
+// ── AUTH: Bearer token issued via our OAuth flow ─────
+const verifyToken = async (req: Request, bearerToken?: string) => {
+  const expected = process.env.MCP_AUTH_TOKEN
+  if (!expected || !bearerToken || bearerToken !== expected) {
+    return undefined // 401
+  }
+  return {
+    token: bearerToken,
+    scopes: ['docs:read', 'docs:write', 'finance:write'],
+    clientId: 'uk-docs-client',
+  }
+}
+
+const authHandler = withMcpAuth(handler, verifyToken, { required: true })
+
+export { authHandler as GET, authHandler as POST, authHandler as DELETE }
