@@ -178,7 +178,7 @@ export default function AppContent() {
   const getSearchResults = () => {
     if (gq.length <= 1) return []
     const results = []
-    docs.filter(d => d.title.toLowerCase().includes(gq) || (d.title_ru || '').toLowerCase().includes(gq) || (d.number || '').toLowerCase().includes(gq)).forEach(d => results.push({ type: 'doc', icon: '📄', title: d.title, sub: d.number || '', id: d.id, action: () => { setTab('docs'); setSelDoc(d); setView('detail'); setShowSearch(false); setGlobalSearch('') } }))
+    docs.filter(d => d.title.toLowerCase().includes(gq) || (d.title_ru || '').toLowerCase().includes(gq) || (d.number || '').toLowerCase().includes(gq)).forEach(d => results.push({ type: 'doc', icon: smartIcon(d) || '📄', title: d.title, sub: d.number || '', id: d.id, action: () => { setTab('docs'); setSelDoc(d); setView('detail'); setShowSearch(false); setGlobalSearch('') } }))
     passports.filter(p => p.type.toLowerCase().includes(gq) || p.number.toLowerCase().includes(gq)).forEach(p => results.push({ type: 'pass', icon: '📘', title: p.type, sub: p.number, id: p.id, action: () => { setTab('passport'); setSelPass(p); setView('passportDetail'); setShowSearch(false); setGlobalSearch('') } }))
     addresses.filter(a => a.label.toLowerCase().includes(gq) || a.city.toLowerCase().includes(gq)).forEach(a => results.push({ type: 'addr', icon: '📍', title: a.label, sub: [a.city, a.postcode].filter(Boolean).join(', '), id: a.id, action: () => { setTab('address'); setSelAddr(a); setView('detail'); setShowSearch(false); setGlobalSearch('') } }))
     resumes.filter(r => r.title.toLowerCase().includes(gq) || r.direction.toLowerCase().includes(gq)).forEach(r => results.push({ type: 'cv', icon: '📝', title: r.title, sub: r.direction, id: r.id, action: () => { setTab('resume'); setSelResume(r); setView('resumeDetail'); setShowSearch(false); setGlobalSearch('') } }))
@@ -1397,7 +1397,7 @@ export default function AppContent() {
               <span style={{ fontSize: 18 }}>←</span> {t('Back', 'Назад', 'Назад')}
             </button>
             <div style={{ background: `linear-gradient(135deg, ${c.color}, ${c.color}bb)`, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 3, color: '#fff', boxShadow: `0 8px 30px ${c.color}40` }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>{c.icon}</div>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>{smartIcon(selDoc) || c.icon}</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{lang !== 'en' && selDoc.title_ru ? selDoc.title_ru : selDoc.title}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: '0 0 20px 20px', padding: '20px 22px', marginBottom: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
@@ -2787,11 +2787,38 @@ function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLab
   )
 }
 
+// Smart icon detection based on document title/notes keywords.
+// Falls back to category icon if no keyword matches.
+function smartIcon(doc) {
+  const text = ((doc.title || '') + ' ' + (doc.title_ru || '') + ' ' + (doc.notes || '')).toLowerCase()
+  const rules = [
+    [/v5c|vehicle registration|log\s?book|техпаспорт|реєстрац.*авто/, '🚗'],
+    [/vehicle tax|road tax|car tax|vehicle excise|транспортний податок/, '🏷️'],
+    [/car insurance|motor insurance|vehicle insurance|страховка.*авт|страхування.*авт/, '🛡️'],
+    [/driving licen[cs]e|водійськ.*права|водительск.*прав/, '🚘'],
+    [/passport|паспорт/, '📘'],
+    [/nhs|gp\b|medical|health|медичн|медицин/, '🏥'],
+    [/dbs/, '🔍'],
+    [/national insurance|\bni\b|ідентифікаційний номер|identification number/, '🪪'],
+    [/bank|monzo|iban|sort code|банк/, '🏦'],
+    [/evisa|e-visa|brp|share code|right to work|immigration status|residence permit|віза/, '🛂'],
+    [/universal credit|benefit|допомог/, '💷'],
+    [/school|education|qualification|освіт|школ/, '🎓'],
+    [/address|adress|tenancy|council tax|utility|оренд|адрес/, '🏠'],
+    [/\bcv\b|resume|резюме/, '📝'],
+  ]
+  for (const r of rules) {
+    if (r[0].test(text)) return r[1]
+  }
+  return null
+}
+
 function DocCard({ doc, cat, lang, onOpen, dark }) {
   const title = lang === 'ru' && doc.title_ru ? doc.title_ru : doc.title
+  const icon = smartIcon(doc) || cat.icon
   return (
     <div onClick={onOpen} style={{ background: '#fff', borderRadius: 14, marginBottom: 8, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,31,61,0.06)', borderLeft: `4px solid ${cat.color}` }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{cat.icon}</div>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#1a202c', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           {doc.pinned && <span style={{ fontSize: 10 }}>📌</span>}
