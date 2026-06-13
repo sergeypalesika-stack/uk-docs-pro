@@ -164,6 +164,95 @@ const handler = createMcpHandler(
         }
       }
     )
+
+    // ── TOOL 4: update_document ──────────────────────
+    server.tool(
+      'update_document',
+      'Update an existing UK Docs document by its ID (e.g. change expiry date, number, notes, title, category, or owner)',
+      {
+        id: z.string().describe('Document ID (UUID) — get this from list_documents'),
+        title: z.string().optional().describe('New document name in English'),
+        title_ru: z.string().optional().describe('New document name in Russian/Ukrainian'),
+        category: z
+          .enum(['visa', 'id', 'insurance', 'bank', 'work', 'housing', 'medical', 'other'])
+          .optional()
+          .describe('New category'),
+        number: z.string().optional().describe('New document number/reference'),
+        valid_until: z.string().optional().describe('New expiry date YYYY-MM-DD'),
+        member: z.string().optional().describe('New family member owner'),
+        notes: z.string().optional().describe('New notes (replaces existing notes)'),
+      },
+      async (args) => {
+        const updates: Record<string, any> = {}
+        if (args.title !== undefined) updates.title = args.title
+        if (args.title_ru !== undefined) updates.title_ru = args.title_ru
+        if (args.category !== undefined) updates.category = args.category
+        if (args.number !== undefined) updates.number = args.number
+        if (args.valid_until !== undefined) updates.valid_until = args.valid_until || null
+        if (args.member !== undefined) updates.member = args.member
+        if (args.notes !== undefined) updates.notes = args.notes
+
+        if (Object.keys(updates).length === 0) {
+          return { content: [{ type: 'text', text: 'Nothing to update — provide at least one field to change.' }] }
+        }
+
+        const { data, error } = await sb()
+          .from('documents')
+          .update(updates)
+          .eq('id', args.id)
+          .eq('user_id', USER_ID)
+          .select()
+          .single()
+
+        if (error) {
+          return { content: [{ type: 'text', text: 'Error: ' + error.message }] }
+        }
+        if (!data) {
+          return { content: [{ type: 'text', text: 'Document not found.' }] }
+        }
+        return {
+          content: [
+            {
+              type: 'text',
+              text:
+                '✅ Updated "' +
+                data.title +
+                '"' +
+                (data.valid_until ? ', now valid until ' + data.valid_until : '') +
+                (data.number ? ', No: ' + data.number : ''),
+            },
+          ],
+        }
+      }
+    )
+
+    // ── TOOL 5: delete_document ───────────────────────
+    server.tool(
+      'delete_document',
+      'Delete a UK Docs document by its ID (e.g. test entries) — get the ID from list_documents',
+      {
+        id: z.string().describe('Document ID (UUID) to delete'),
+      },
+      async (args) => {
+        const { data, error } = await sb()
+          .from('documents')
+          .delete()
+          .eq('id', args.id)
+          .eq('user_id', USER_ID)
+          .select()
+          .single()
+
+        if (error) {
+          return { content: [{ type: 'text', text: 'Error: ' + error.message }] }
+        }
+        if (!data) {
+          return { content: [{ type: 'text', text: 'Document not found (already deleted?).' }] }
+        }
+        return {
+          content: [{ type: 'text', text: '🗑️ Deleted document: "' + data.title + '" (ID: ' + data.id + ')' }],
+        }
+      }
+    )
   },
   {
     // Server info
