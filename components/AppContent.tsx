@@ -111,6 +111,8 @@ export default function AppContent() {
   const [jobsList, setJobsList] = useState([])
   const [finTab, setFinTab] = useState('log')
   const [finMonth, setFinMonth] = useState(() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') })
+  const [shiftStart, setShiftStart] = useState(null)
+  const [shiftMiles, setShiftMiles] = useState('')
   const [incForm, setIncForm] = useState({ date: new Date().toISOString().slice(0,10), amount: '', note: '' })
   const [mileForm, setMileForm] = useState({ date: new Date().toISOString().slice(0,10), miles: '', note: '' })
   const [finSubTab, setFinSubTab] = useState('log')
@@ -421,6 +423,16 @@ export default function AppContent() {
   const rest   = filteredDocs.filter(d => !d.pinned)
   const expiring60 = docs.filter(d => { const x = daysUntil(d.valid_until || ''); return x !== null && x >= 0 && x <= 60 })
   const todoDone   = todos.filter(t => t.done).length
+
+  // ── EARNINGS WIDGETS
+  const today = new Date().toISOString().slice(0,10)
+  const thisWeekStart = new Date(); thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay() + 1)
+  const thisWeekStr = thisWeekStart.toISOString().slice(0,10)
+  const thisMonth = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0')
+  const earnToday  = finance.filter(e => e.type === 'income' && e.date === today).reduce((s,e) => s + Number(e.amount), 0)
+  const earnWeek   = finance.filter(e => e.type === 'income' && e.date >= thisWeekStr).reduce((s,e) => s + Number(e.amount), 0)
+  const earnMonth  = finance.filter(e => e.type === 'income' && e.date.startsWith(thisMonth)).reduce((s,e) => s + Number(e.amount), 0)
+  const spendMonth = finance.filter(e => e.type === 'expense' && e.date.startsWith(thisMonth)).reduce((s,e) => s + Number(e.amount), 0)
 
   // ── DOC ACTIONS
   const handleAddDoc = async () => {
@@ -1315,6 +1327,86 @@ export default function AppContent() {
                 ))}
               </div>
             )}
+
+            {/* ── EARNINGS WIDGET ── */}
+            <div style={{ background: dark ? '#0d2b0d' : '#f0fdf4', border: '1px solid ' + (dark ? '#1a4a1a' : '#86efac'), borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#16a34a', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>💷 {t('Earnings', 'Заробіток', 'Заробіток')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                {[
+                  { label: t('Today','Сьогодні','Сьогодні'), val: earnToday, color: earnToday > 0 ? '#16a34a' : (dark ? '#475569' : '#94a3b8') },
+                  { label: t('This week','Тиждень','Тиждень'), val: earnWeek, color: earnWeek > 0 ? '#16a34a' : (dark ? '#475569' : '#94a3b8') },
+                  { label: t('This month','Місяць','Місяць'), val: earnMonth, color: earnMonth > 0 ? '#16a34a' : (dark ? '#475569' : '#94a3b8') },
+                ].map(function(item) { return (
+                  <div key={item.label} style={{ background: dark ? '#0a1f0a' : '#fff', borderRadius: 10, padding: '8px 6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: dark ? '#64748b' : '#94a3b8', marginBottom: 3 }}>{item.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{fmtGBP(item.val)}</div>
+                  </div>
+                )})}
+              </div>
+              {spendMonth > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: dark ? '#64748b' : '#94a3b8', borderTop: '1px solid ' + (dark ? '#1a4a1a' : '#bbf7d0'), paddingTop: 8 }}>
+                  <span>{t('Expenses this month','Витрати за місяць','Витрати за місяць')}</span>
+                  <span style={{ color: '#ef4444', fontWeight: 600 }}>− {fmtGBP(spendMonth)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* ── QUICK ADD BUTTONS ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <button onClick={function() {
+                const amount = prompt(t('Delivery income £?','Дохід від доставки £?','Дохід від доставки £?'))
+                if (!amount || isNaN(Number(amount))) return
+                const entry = { type: 'income', amount: Number(amount), date: today, category: 'income', note: 'Delivery' }
+                if (user) { supabase.from('finance_entries').insert({ ...entry, user_id: user.id }).then(function(r) { if (!r.error) setFinance(function(prev) { return [...prev, { ...entry, id: Date.now().toString() }] }) }) }
+              }} style={{ background: dark ? '#0d2b0d' : '#f0fdf4', border: '1px solid #86efac', borderRadius: 12, padding: '12px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 24 }}>💰</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>{t('+ Income','+ Дохід','+ Дохід')}</span>
+              </button>
+              <button onClick={function() {
+                const amount = prompt(t('Fuel cost £?','Вартість палива £?','Вартість палива £?'))
+                if (!amount || isNaN(Number(amount))) return
+                const entry = { type: 'expense', amount: Number(amount), date: today, category: 'fuel', note: 'Fuel' }
+                if (user) { supabase.from('finance_entries').insert({ ...entry, user_id: user.id }).then(function(r) { if (!r.error) setFinance(function(prev) { return [...prev, { ...entry, id: Date.now().toString() }] }) }) }
+              }} style={{ background: dark ? '#1c1917' : '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, padding: '12px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 24 }}>⛽</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#c2410c' }}>{t('+ Fuel','+ Паливо','+ Паливо')}</span>
+              </button>
+            </div>
+
+            {/* ── MILEAGE SHIFT TRACKER ── */}
+            <div style={{ background: dark ? '#1e293b' : '#fff', borderRadius: 14, padding: '14px 16px', marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: dark ? '#94a3b8' : '#475569', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>🚗 {t('Shift Mileage','Пробіг за зміну','Пробіг за зміну')}</div>
+              {!shiftStart ? (
+                <button onClick={function() { setShiftStart(new Date()) }} style={{ width: '100%', background: '#1d4ed8', border: 'none', borderRadius: 10, padding: '12px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                  🟢 {t('Start Shift','Почати зміну','Почати зміну')}
+                </button>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 12, color: dark ? '#94a3b8' : '#64748b', marginBottom: 8 }}>
+                    ⏱ {t('Started','Почато','Почато')}: {shiftStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    {' · '}{Math.floor((Date.now() - shiftStart.getTime()) / 60000)}{t(' min',' хв',' хв')}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="number" value={shiftMiles} onChange={function(e) { setShiftMiles(e.target.value) }}
+                      placeholder={t('Miles driven','Миль проїхано','Миль проїхано')}
+                      style={{ flex: 1, background: dark ? '#0f172a' : '#f8fafc', border: '1px solid ' + (dark ? '#334155' : '#e2e8f0'), borderRadius: 8, padding: '8px 10px', fontSize: 13, color: dark ? '#e2e8f0' : '#0f172a' }} />
+                    <button onClick={function() {
+                      if (!shiftMiles || isNaN(Number(shiftMiles))) return
+                      const miles = Number(shiftMiles)
+                      const rate = 0.45
+                      const allowance = Math.round(miles * rate * 100) / 100
+                      const entry = { type: 'expense', amount: allowance, date: today, category: 'mileage', note: miles + '|Shift ' + (shiftStart ? shiftStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '') }
+                      if (user) { supabase.from('finance_entries').insert({ ...entry, user_id: user.id }).then(function(r) { if (!r.error) setFinance(function(prev) { return [...prev, { ...entry, id: Date.now().toString() }] }) }) }
+                      setShiftStart(null)
+                      setShiftMiles('')
+                      alert(miles + t(' miles logged → £',' миль → £',' миль → £') + allowance.toFixed(2) + t(' mileage allowance',' компенсація',' компенсація'))
+                    }} style={{ background: '#ef4444', border: 'none', borderRadius: 8, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      🔴 {t('End','Кінець','Кінець')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Notifications */}
             <NotificationManager docs={docs} passports={passports} lang={lang} dark={dark} />
