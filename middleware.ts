@@ -1,51 +1,39 @@
-import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, mcp-protocol-version, mcp-session-id',
+    'Access-Control-Expose-Headers': 'mcp-session-id, WWW-Authenticate',
+    'Access-Control-Max-Age': '86400',
+  }
+}
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
-
-  if (!user && !isAuthPage) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth'
-    return NextResponse.redirect(url)
+export function middleware(req: NextRequest) {
+  // Some MCP clients (incl. Claude) send the OAuth authorize request to the
+  // bare origin ("/") instead of the advertised authorization_endpoint.
+  // Forward that case to our real OAuth authorize handler.
+  if (req.nextUrl.pathname === '/' && req.nextUrl.searchParams.get('response_type') === 'code') {
+    const url = req.nextUrl.clone()
+    url.pathname = '/api/oauth/authorize'
+    return NextResponse.rewrite(url)
   }
 
-  if (user && isAuthPage) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: corsHeaders() })
   }
 
-  return supabaseResponse
+  const res = NextResponse.next()
+  const headers = corsHeaders()
+  for (const key in headers) {
+    res.headers.set(key, (headers as any)[key])
+  }
+  return res
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.svg|.*\\.ico|.*\\.webp).*)',
-  ],
+  matcher: ['/', '/api/:path*', '/.well-known/:path*'],
 }
