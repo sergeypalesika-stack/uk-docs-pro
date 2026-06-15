@@ -1535,6 +1535,7 @@ export default function AppContent() {
 
             {pinned.length > 0 && (<><SLabel>📌 {t('Pinned', 'Закріплені', 'Закріплені')}</SLabel>{pinned.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)}<div style={{ height: 8 }} /></>)}
             {rest.map(d => <DocCard key={d.id} doc={d} cat={cat(d.category)} lang={lang} dark={dark} onOpen={() => { setSelDoc(d); setView('detail') }} />)}
+            <div style={{ height: 80 }} />
 
             {filteredDocs.length === 0 && (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
@@ -1561,7 +1562,12 @@ export default function AppContent() {
               {selDoc.number && <DRow label={t('Number / Code', 'Номер / Код', 'Номер / Код')}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}><span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 800, letterSpacing: '0.07em', color: C.navy }}>{selDoc.number}</span><CopyBtn value={selDoc.number} lang={lang} /></div></DRow>}
               {selDoc.valid_from  && <DRow label={t('Valid from', 'Дійсний з', 'Дійсний з')}>{formatDate(selDoc.valid_from)}</DRow>}
               {selDoc.valid_until && <DRow label={t('Valid until', 'Дійсний до', 'Дійсний до')}><span>{formatDate(selDoc.valid_until)}</span><ExpiryBadge d={selDoc.valid_until} /></DRow>}
-              {(selDoc.notes || selDoc.notes_ru) && <DRow label={t('Notes', 'Нотатки', 'Нотатки')}><span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>{lang !== 'en' && selDoc.notes_ru ? selDoc.notes_ru : selDoc.notes}</span></DRow>}
+              {(selDoc.notes || selDoc.notes_ru) && (
+                <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>{t('Notes', 'Нотатки', 'Нотатки')}</div>
+                  <FormatNotes text={lang !== 'en' && selDoc.notes_ru ? selDoc.notes_ru : selDoc.notes} dark={dark} />
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
               <button onClick={() => { setDocForm({ category: selDoc.category, title: selDoc.title, title_ru: selDoc.title_ru, number: selDoc.number, valid_from: selDoc.valid_from || '', valid_until: selDoc.valid_until || '', notes: selDoc.notes, notes_ru: selDoc.notes_ru, pinned: selDoc.pinned }); setView('edit') }} style={{ flex: 1, background: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#1d4ed8' }}>✏️ {t('Edit', 'Змінити', 'Змінити')}</button>
@@ -3070,6 +3076,65 @@ function PinScreen({ pinInput, pinError, dark, onKey, onRemove, label, removeLab
       <button onClick={onRemove} style={{ marginTop: 24, background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 13 }}>
         {removeLabel}
       </button>
+    </div>
+  )
+}
+
+// Smart notes formatter - renders structured notes beautifully
+function FormatNotes({ text, dark }) {
+  if (!text) return null
+  const lines = text.split(/[.\n]/).map(function(l){ return l.trim() }).filter(Boolean)
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {lines.map(function(line, i) {
+        // Warning line
+        if (line.startsWith('⚠️') || line.toLowerCase().startsWith('warning') || line.toLowerCase().startsWith('важливо') || line.toLowerCase().startsWith('важно')) {
+          return (
+            <div key={i} style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#c2410c', lineHeight: 1.5, fontWeight: 600 }}>
+              {line}
+            </div>
+          )
+        }
+        // Key: Value pair
+        const colonIdx = line.indexOf(':')
+        if (colonIdx > 0 && colonIdx < 30 && colonIdx < line.length - 1) {
+          const key = line.slice(0, colonIdx).trim()
+          const val = line.slice(colonIdx + 1).trim()
+          if (key && val && key.split(' ').length <= 4) {
+            return (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#7a8aaa', textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 0, minWidth: 80, paddingTop: 1 }}>{key}</span>
+                <span style={{ fontSize: 13, color: dark ? '#e2e8f0' : '#1a202c', lineHeight: 1.5, fontWeight: 500 }}>{val}</span>
+              </div>
+            )
+          }
+        }
+        // Date pattern
+        if (/\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(line) || /\d{4}-\d{2}-\d{2}/.test(line)) {
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14 }}>📅</span>
+              <span style={{ fontSize: 13, color: dark ? '#e2e8f0' : '#1a202c', lineHeight: 1.5 }}>{line}</span>
+            </div>
+          )
+        }
+        // Bullet / list item
+        if (line.startsWith('-') || line.startsWith('·') || line.startsWith('•') || line.startsWith('*')) {
+          return (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ color: '#7a8aaa', flexShrink: 0, fontSize: 16, lineHeight: 1.4 }}>•</span>
+              <span style={{ fontSize: 13, color: dark ? '#e2e8f0' : '#1a202c', lineHeight: 1.5 }}>{line.replace(/^[-·•*]\s*/, '')}</span>
+            </div>
+          )
+        }
+        // Regular line
+        return (
+          <div key={i} style={{ fontSize: 13, color: dark ? '#94a3b8' : '#4a5568', lineHeight: 1.6 }}>
+            {line}
+          </div>
+        )
+      })}
     </div>
   )
 }
